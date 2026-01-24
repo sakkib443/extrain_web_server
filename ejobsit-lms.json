@@ -1,0 +1,48 @@
+{
+    "title": "eJobsIT LMS - Premium Learning Management & Digital Marketplace",
+    "platform": "Next.js",
+    "category": "6974845527f13ce95029564e",
+    "subCategory": "LMS + E-commerce",
+    "accessType": "paid",
+    "price": 85000,
+    "offerPrice": 50000,
+    "description": "Complete LMS & Digital Marketplace solution with Next.js 14, Node.js, MongoDB. Features 84+ pages, Admin/Mentor/Student dashboards, bKash payment, Cloudinary uploads, multi-language support (EN/BN), dark mode, and real-time notifications.",
+    "longDescription": "## 🚀 eJobsIT LMS - Complete Solution\n\n### ✨ Key Highlights\n- **84+ Frontend Pages** - Full-featured public site + 3 dashboards\n- **23 Backend API Modules** - Complete REST API with Zod validation\n- **Real-time Notifications** - Order, enrollment, review alerts\n- **bKash Payment Gateway** - Bangladesh payment integration\n- **Multi-language** - English & Bengali with persistent preference\n- **Dark/Light Mode** - System theme detection\n\n### 📊 Dashboard Features\n- **Admin (24 pages)** - Full control, analytics, reports, PDF export\n- **Mentor (13 pages)** - Course management, student tracking, earnings\n- **Student (15 pages)** - Learning progress, certificates, downloads\n\n### 🎓 LMS Features\n- Course creation with modules & lessons\n- Video (YouTube/Vimeo), Text, Quiz, Document lessons\n- Progress tracking & certificate generation\n- Enrollment management\n\n### 🛒 E-commerce Features\n- Shopping cart & wishlist\n- Coupon/discount system\n- Order management\n- Digital downloads\n\n### 🔧 Tech Stack\n- Frontend: Next.js 14, Tailwind CSS, Redux Toolkit, Framer Motion\n- Backend: Node.js, Express.js, MongoDB, JWT Auth\n- Services: Cloudinary, Nodemailer, bKash SDK",
+    "images": [
+        "https://res.cloudinary.com/demo/image/upload/v1/samples/ecommerce/lms-dashboard.jpg",
+        "https://res.cloudinary.com/demo/image/upload/v1/samples/ecommerce/lms-courses.jpg",
+        "https://res.cloudinary.com/demo/image/upload/v1/samples/ecommerce/lms-admin.jpg"
+    ],
+    "previewUrl": "https://ejobsit-lms-demo.vercel.app",
+    "downloadFile": "https://drive.google.com/file/d/ejobsit-lms-full-source",
+    "features": [
+        "84+ Frontend Pages with 3 Dashboards",
+        "23 Backend API Modules",
+        "Real-time Notification System",
+        "bKash Payment Gateway Integration",
+        "Multi-language Support (EN/BN)",
+        "Dark/Light Mode with Theme Persistence",
+        "Cloudinary File & Image Upload",
+        "PDF Report Generation (jsPDF)",
+        "Coupon & Discount System",
+        "Quiz System with Auto-scoring",
+        "Certificate Generation & Verification",
+        "Responsive Design (Mobile First)"
+    ],
+    "technologies": [
+        "Next.js 14",
+        "Node.js",
+        "Express.js",
+        "MongoDB",
+        "Tailwind CSS",
+        "Redux Toolkit",
+        "Framer Motion",
+        "Cloudinary",
+        "bKash SDK",
+        "JWT Auth",
+        "Zod",
+        "Nodemailer"
+    ],
+    "status": "approved",
+    "isFeatured": true
+}
