@@ -42,10 +42,10 @@ export async function connectDB(): Promise<typeof mongoose> {
   // যদি connection promise না থাকে, নতুন তৈরি করো
   if (!cached.promise) {
     const opts: mongoose.ConnectOptions = {
-      // bufferCommands: false রাখা হয়েছে যাতে connection না হওয়া পর্যন্ত command buffer না করে
-      bufferCommands: false,
+      // bufferCommands: true রাখা হয়েছে যাতে query wait করে connection হওয়া পর্যন্ত
+      bufferCommands: true,
       maxPoolSize: 10,
-      serverSelectionTimeoutMS: 10000,
+      serverSelectionTimeoutMS: 30000,
       socketTimeoutMS: 45000,
     };
 
