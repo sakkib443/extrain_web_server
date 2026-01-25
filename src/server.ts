@@ -39,17 +39,29 @@ export async function connectDB(): Promise<typeof mongoose> {
     return cached.conn;
   }
 
+  // Check if already connected via mongoose state
+  if (mongoose.connection.readyState === 1) {
+    console.log('⚡ MongoDB already connected (state check)');
+    cached.conn = mongoose;
+    return mongoose;
+  }
+
   // যদি connection promise না থাকে, নতুন তৈরি করো
   if (!cached.promise) {
     const opts: mongoose.ConnectOptions = {
-      // bufferCommands: true রাখা হয়েছে যাতে query wait করে connection হওয়া পর্যন্ত
-      bufferCommands: true,
-      maxPoolSize: 10,
-      serverSelectionTimeoutMS: 30000,
-      socketTimeoutMS: 45000,
+      // bufferCommands: false for faster failure on cold start
+      bufferCommands: false,
+      maxPoolSize: 5, // Reduced for serverless
+      minPoolSize: 1,
+      serverSelectionTimeoutMS: 10000, // Faster timeout (10s instead of 30s)
+      socketTimeoutMS: 20000, // Reduced socket timeout
+      connectTimeoutMS: 10000, // Add explicit connect timeout
+      heartbeatFrequencyMS: 10000, // More frequent heartbeats
     };
 
     console.log('🔌 Creating new MongoDB connection...');
+    console.log('🔗 Database URL:', config.database_url?.substring(0, 30) + '...');
+
     cached.promise = mongoose.connect(config.database_url, opts).then((mongoose) => {
       console.log('✅ MongoDB connected successfully!');
       return mongoose;

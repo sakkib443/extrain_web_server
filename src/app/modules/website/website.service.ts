@@ -117,13 +117,15 @@ const WebsiteService = {
         // Pagination
         const skip = (page - 1) * limit;
 
-        // Execute
+        // Execute with optimization
         const [websites, total] = await Promise.all([
             Website.find(whereConditions)
+                .select('-likedBy -longDescription -aiFeatures') // Exclude heavy fields
                 .populate('category', 'name slug')
                 .sort(sortConditions)
                 .skip(skip)
-                .limit(limit),
+                .limit(limit)
+                .lean(), // Return plain objects for faster performance
             Website.countDocuments(whereConditions),
         ]);
 

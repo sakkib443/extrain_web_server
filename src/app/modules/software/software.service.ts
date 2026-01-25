@@ -125,14 +125,16 @@ const SoftwareService = {
         // Pagination
         const skip = (page - 1) * limit;
 
-        // Execute (removed platform populate since it's now a string)
+        // Execute with optimization (removed platform populate since it's now a string)
         const [software, total] = await Promise.all([
             Software.find(whereConditions)
+                .select('-likedBy -longDescription') // Exclude heavy fields
                 .populate('author', 'firstName lastName avatar')
                 .populate('category', 'name slug')
                 .sort(sortConditions)
                 .skip(skip)
-                .limit(limit),
+                .limit(limit)
+                .lean(), // Return plain objects for faster performance
             Software.countDocuments(whereConditions),
         ]);
 
