@@ -49,14 +49,13 @@ export async function connectDB(): Promise<typeof mongoose> {
   // যদি connection promise না থাকে, নতুন তৈরি করো
   if (!cached.promise) {
     const opts: mongoose.ConnectOptions = {
-      // bufferCommands: false for faster failure on cold start
-      bufferCommands: false,
+      // bufferCommands: true so queries wait for connection
+      bufferCommands: true,
       maxPoolSize: 5, // Reduced for serverless
       minPoolSize: 1,
-      serverSelectionTimeoutMS: 10000, // Faster timeout (10s instead of 30s)
-      socketTimeoutMS: 20000, // Reduced socket timeout
-      connectTimeoutMS: 10000, // Add explicit connect timeout
-      heartbeatFrequencyMS: 10000, // More frequent heartbeats
+      serverSelectionTimeoutMS: 15000, // 15s timeout
+      socketTimeoutMS: 30000, // Socket timeout
+      connectTimeoutMS: 15000, // Connection timeout
     };
 
     console.log('🔌 Creating new MongoDB connection...');
