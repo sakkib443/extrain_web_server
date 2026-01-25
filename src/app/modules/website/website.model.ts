@@ -67,6 +67,7 @@ const websiteSchema = new Schema<IWebsite>(
 
         // ==================== Details ====================
         features: [{ type: String }],
+        aiFeatures: [{ type: String }],
         technologies: [{ type: String }],
         description: {
             type: String,

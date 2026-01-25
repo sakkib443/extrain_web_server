@@ -248,9 +248,7 @@ const AnalyticsService = {
      */
     async getCategoryRevenue(): Promise<{
         labels: string[];
-        courses: number[];
-        websites: number[];
-        software: number[];
+        categories: { [key: string]: number[] };
     }> {
         const monthsNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -268,12 +266,8 @@ const AnalyticsService = {
 
         // Prepare labels for the last 12 months
         const labels: string[] = [];
-        const courseRevenue: number[] = new Array(12).fill(0);
-        const websiteRevenue: number[] = new Array(12).fill(0);
-        const softwareRevenue: number[] = new Array(12).fill(0);
-
-        // Map month indexes to our array indexes (0-11)
         const monthToIdx: { [key: string]: number } = {};
+
         for (let i = 0; i < 12; i++) {
             const date = new Date(twelveMonthsAgo);
             date.setMonth(twelveMonthsAgo.getMonth() + i);
@@ -283,6 +277,20 @@ const AnalyticsService = {
             labels.push(monthsNames[mIdx]);
             monthToIdx[key] = i;
         }
+
+        // Identify all unique product types in the orders
+        const productTypes = new Set<string>();
+        orders.forEach((order: any) => {
+            order.items?.forEach((item: any) => {
+                if (item.productType) productTypes.add(item.productType.toLowerCase());
+            });
+        });
+
+        // Initialize revenue arrays for each product type
+        const categories: { [key: string]: number[] } = {};
+        productTypes.forEach(type => {
+            categories[type] = new Array(12).fill(0);
+        });
 
         // Process each order
         orders.forEach((order: any) => {
@@ -296,25 +304,18 @@ const AnalyticsService = {
                 order.items?.forEach((item: any) => {
                     const amount = item.price || 0;
                     const productType = item.productType?.toLowerCase() || '';
-
-                    if (productType === 'course') {
-                        courseRevenue[idx] += amount;
-                    } else if (productType === 'website') {
-                        websiteRevenue[idx] += amount;
-                    } else if (productType === 'software') {
-                        softwareRevenue[idx] += amount;
+                    if (categories[productType]) {
+                        categories[productType][idx] += amount;
                     }
                 });
             }
         });
 
-        console.log(`[Analytics] Category revenue generated from ${orders.length} orders`);
+        console.log(`[Analytics] Category revenue generated for ${productTypes.size} categories from ${orders.length} orders`);
 
         return {
             labels,
-            courses: courseRevenue,
-            websites: websiteRevenue,
-            software: softwareRevenue,
+            categories,
         };
     },
 

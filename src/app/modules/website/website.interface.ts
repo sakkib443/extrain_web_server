@@ -44,6 +44,7 @@ export interface IWebsite {
 
     // Details
     features: string[];              // Feature list
+    aiFeatures?: string[];           // Artificial Intelligence features
     technologies: string[];          // Tech stack used
     description: string;             // Short description
     longDescription?: string;        // Full description (markdown)
