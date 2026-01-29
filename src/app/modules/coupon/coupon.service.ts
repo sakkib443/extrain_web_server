@@ -145,10 +145,15 @@ const applyCoupon = async (
         if (coupon.maxDiscount && discount > coupon.maxDiscount) {
             discount = coupon.maxDiscount;
         }
-    } else {
+    } else if (coupon.discountType === 'fixed') {
         discount = coupon.discountValue;
         if (discount > cartTotal) {
             discount = cartTotal;
+        }
+    } else if (coupon.discountType === 'fixed_price') {
+        discount = cartTotal - coupon.discountValue;
+        if (discount < 0) {
+            discount = 0;
         }
     }
 

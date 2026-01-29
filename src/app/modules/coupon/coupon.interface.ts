@@ -17,7 +17,7 @@ export interface ICoupon {
     description?: string;            // Description
 
     // Discount Settings
-    discountType: 'percentage' | 'fixed';  // Discount type
+    discountType: 'percentage' | 'fixed' | 'fixed_price';  // Discount type
     discountValue: number;           // Amount or percentage
     maxDiscount?: number;            // Maximum discount amount (for percentage)
     minPurchase?: number;            // Minimum purchase amount

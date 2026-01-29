@@ -26,7 +26,7 @@ const couponSchema = new Schema<ICoupon, CouponModel>(
         },
         discountType: {
             type: String,
-            enum: ['percentage', 'fixed'],
+            enum: ['percentage', 'fixed', 'fixed_price'],
             required: true,
             default: 'percentage'
         },

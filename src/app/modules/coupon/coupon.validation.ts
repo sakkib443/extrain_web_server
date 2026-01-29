@@ -14,7 +14,7 @@ const createCouponZodSchema = z.object({
             required_error: 'Coupon name is required'
         }),
         description: z.string().optional(),
-        discountType: z.enum(['percentage', 'fixed'], {
+        discountType: z.enum(['percentage', 'fixed', 'fixed_price'], {
             required_error: 'Discount type is required'
         }),
         discountValue: z.number({
@@ -43,7 +43,7 @@ const updateCouponZodSchema = z.object({
         code: z.string().min(3).max(20).optional(),
         name: z.string().optional(),
         description: z.string().optional(),
-        discountType: z.enum(['percentage', 'fixed']).optional(),
+        discountType: z.enum(['percentage', 'fixed', 'fixed_price']).optional(),
         discountValue: z.number().min(0).optional(),
         maxDiscount: z.number().min(0).optional().nullable(),
         minPurchase: z.number().min(0).optional(),
