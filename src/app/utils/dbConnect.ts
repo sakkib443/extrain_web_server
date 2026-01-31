@@ -42,10 +42,18 @@ export async function connectDB(): Promise<typeof mongoose> {
         const opts: mongoose.ConnectOptions = {
             // bufferCommands: true so queries wait for connection
             bufferCommands: true,
-            maxPoolSize: process.env.NODE_ENV === 'production' ? 1 : 10, // Optimize for serverless vs local
-            serverSelectionTimeoutMS: 15000, // 15s timeout
-            socketTimeoutMS: 30000,
-            connectTimeoutMS: 15000,
+            // Increased pool size for better concurrent request handling
+            maxPoolSize: process.env.NODE_ENV === 'production' ? 5 : 10,
+            minPoolSize: process.env.NODE_ENV === 'production' ? 1 : 2,
+            // Reduced timeouts for faster response
+            serverSelectionTimeoutMS: 5000, // 5s timeout (was 15s)
+            socketTimeoutMS: 10000, // 10s (was 30s)
+            connectTimeoutMS: 5000, // 5s (was 15s)
+            // Faster heartbeat for connection health
+            heartbeatFrequencyMS: 10000,
+            // Retry writes on network errors
+            retryWrites: true,
+            retryReads: true,
         };
 
         if (process.env.NODE_ENV !== 'production') {

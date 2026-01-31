@@ -56,18 +56,28 @@ app.use(cookieParser());
 // ==================== Vercel Database Connection Middleware ====================
 // This MUST be here (before routes) for Vercel Serverless to work
 import mongoose from 'mongoose';
-import { connectDB, cleanupStaleIndexes } from './app/utils/dbConnect';
+import { connectDB } from './app/utils/dbConnect';
+
+// Track if cleanup has already run
+let hasCleanedIndexes = false;
 
 app.use(async (req: Request, res: Response, next) => {
-  // Local development handles connection in server.ts startup
-  // But Vercel needs this middleware check for every request
-  if (mongoose.connection.readyState !== 1) {
+  // Only reconnect if not connected (Vercel cold starts)
+  // readyState: 0 = disconnected, 1 = connected, 2 = connecting, 3 = disconnecting
+  if (mongoose.connection.readyState === 0) {
     try {
-      if (process.env.NODE_ENV !== 'production') console.log('🔄 Reconnecting to DB in middleware...');
       await connectDB();
-      cleanupStaleIndexes();
+      // Only run cleanup once per instance, not every request
+      if (!hasCleanedIndexes) {
+        hasCleanedIndexes = true;
+        // Import and run cleanup lazily to avoid blocking
+        import('./app/utils/dbConnect').then(({ cleanupStaleIndexes }) => {
+          cleanupStaleIndexes().catch(() => { });
+        });
+      }
     } catch (error) {
       console.error('❌ Database connection failed in middleware:', error);
+      return res.status(503).json({ success: false, message: 'Database connection failed' });
     }
   }
   next();
