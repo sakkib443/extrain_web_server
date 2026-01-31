@@ -188,49 +188,31 @@ const deliverOrderItems = async (order: any, rawItems?: any[]): Promise<void> =>
 
     for (const item of itemsToDeliver) {
         try {
-            const productId = item.productId || item.product;
+            const productId = item.product || item.productId;
 
             if (item.productType === 'course') {
                 const { EnrollmentService } = await import('../enrollment/enrollment.service');
                 const { Course } = await import('../course/course.model');
                 try {
-                    await EnrollmentService.enrollStudent(userId, productId, order._id!.toString());
-                    // Increment totalEnrollments for course
+                    await EnrollmentService.enrollStudent(userId, productId.toString(), order._id!.toString());
                     await Course.findByIdAndUpdate(productId, { $inc: { totalEnrollments: 1 } });
-                    console.log(`Enrolled user ${userId} in course ${productId}`);
                 } catch (enrollError: any) {
-                    // Ignore "already enrolled" errors but log others
-                    if (enrollError.statusCode !== 400) {
-                        console.error(`Enrollment failed for ${productId}:`, enrollError);
-                    }
+                    if (enrollError.statusCode !== 400) console.error(`Enrollment failed:`, enrollError);
                 }
             } else if (item.productType === 'website') {
                 const { Website } = await import('../website/website.model');
                 await Website.findByIdAndUpdate(productId, { $inc: { salesCount: 1 } });
-                await DownloadService.createDownloadRecord(
-                    userId,
-                    order._id!.toString(),
-                    productId,
-                    item.productType,
-                    item.title
-                );
+                await DownloadService.createDownloadRecord(userId, order._id!.toString(), productId.toString(), item.productType, item.title);
             } else if (item.productType === 'software') {
                 const { Software } = await import('../software/software.model');
                 await Software.findByIdAndUpdate(productId, { $inc: { salesCount: 1 } });
-                await DownloadService.createDownloadRecord(
-                    userId,
-                    order._id!.toString(),
-                    productId,
-                    item.productType,
-                    item.title
-                );
+                await DownloadService.createDownloadRecord(userId, order._id!.toString(), productId.toString(), item.productType, item.title);
             }
         } catch (error) {
             console.error(`Failed to deliver ${item.title}:`, error);
         }
     }
 
-    // Send invoice email
     try {
         const user = await User.findById(userId);
         if (user) {
@@ -238,11 +220,7 @@ const deliverOrderItems = async (order: any, rawItems?: any[]): Promise<void> =>
                 firstName: user.firstName,
                 email: user.email,
                 orderId: order._id!.toString(),
-                items: itemsToDeliver.map((item: any) => ({
-                    title: item.title,
-                    price: item.price,
-                    productType: item.productType
-                })),
+                items: itemsToDeliver.map((item: any) => ({ title: item.title, price: item.price, productType: item.productType })),
                 totalAmount: order.totalAmount,
                 paymentMethod: order.paymentMethod,
                 transactionId: order.transactionId,
@@ -250,27 +228,12 @@ const deliverOrderItems = async (order: any, rawItems?: any[]): Promise<void> =>
             }).catch(err => console.error('Invoice email error:', err));
         }
     } catch (error) {
-        console.error('Failed to send invoice email:', error);
+        console.error('Email error:', error);
     }
 };
 
 const OrderService = {
-    async createOrder(
-        userId: string,
-        items: Array<{ productId: string; productType: 'website' | 'software' | 'course'; title: string; price: number; image?: string }>,
-        paymentMethod: string = 'stripe',
-        paymentStatus: 'pending' | 'completed' | 'failed' | 'refunded' = 'pending',
-        installmentData?: {
-            isInstallment?: boolean;
-            installmentCount?: number;
-            installments?: any[];
-            couponCode?: string;
-            discountAmount?: number;
-        },
-        manualPaymentDetails?: IOrder['manualPaymentDetails']
-    ): Promise<IOrder> {
-        console.log(`Processing order for user: ${userId}, items count: ${items.length}`);
-
+    async createOrder(userId: string, items: any[], paymentMethod = 'stripe', paymentStatus: any = 'pending', installmentData?: any, manualPaymentDetails?: any): Promise<IOrder> {
         const orderItems = items.map((item) => ({
             product: new Types.ObjectId(item.productId),
             productType: item.productType,
@@ -280,96 +243,52 @@ const OrderService = {
         }));
 
         const totalAmount = items.reduce((sum, item) => sum + item.price, 0);
-
-        // If it's an installment order and manual payment proof is provided, 
-        // associate it with the first installment
         let finalInstallments = installmentData?.installments;
-        if (installmentData?.isInstallment && finalInstallments && finalInstallments.length > 0 && manualPaymentDetails) {
+        if (installmentData?.isInstallment && finalInstallments && manualPaymentDetails) {
             finalInstallments[0].paymentDetails = manualPaymentDetails;
             finalInstallments[0].status = 'pending';
         }
 
         const order = await Order.create({
             orderNumber: generateOrderNumber(),
-            user: userId,
+            user: new Types.ObjectId(userId),
             items: orderItems,
-            totalAmount: installmentData?.discountAmount
-                ? totalAmount - installmentData.discountAmount
-                : totalAmount,
+            totalAmount: installmentData?.discountAmount ? totalAmount - installmentData.discountAmount : totalAmount,
             paymentMethod,
             paymentStatus,
-            orderDate: new Date(),
-            ...installmentData,
+            manualPaymentDetails,
+            isInstallment: installmentData?.isInstallment,
+            installmentCount: installmentData?.installmentCount,
             installments: finalInstallments,
-            manualPaymentDetails
+            couponCode: installmentData?.couponCode,
+            discountAmount: installmentData?.discountAmount
         });
 
-        // Create notification for admin immediately when order is placed
         try {
-            const user = await User.findById(userId);
-            if (user) {
-                const productTitles = items.map(item => item.title).join(', ');
-                await NotificationService.createOrderNotification({
-                    orderId: order._id,
-                    userId: new Types.ObjectId(userId),
-                    userName: `${user.firstName} ${user.lastName || ''}`.trim(),
-                    amount: totalAmount,
-                    productName: productTitles.length > 50 ? productTitles.substring(0, 47) + '...' : productTitles,
-                });
-            }
-        } catch (err) {
-            console.error('Order notification error:', err);
-        }
+            await NotificationService.createNotification({
+                user: new Types.ObjectId(userId),
+                title: 'Order Placed',
+                message: `Your order #${order.orderNumber} has been placed successfully.`,
+                type: 'order'
+            });
+        } catch (err) { console.error('Notification error:', err); }
 
-        // If payment is completed, handle delivery (downloads or enrollments)
-        if (paymentStatus === 'completed') {
-            await deliverOrderItems(order, items);
-        }
-
+        if (paymentStatus === 'completed') await deliverOrderItems(order, items);
         return order;
     },
 
-    async getUserOrders(userId: string, page = 1, limit = 10): Promise<{ data: IOrder[]; total: number }> {
+    async getUserOrders(userId: string, page = 1, limit = 10) {
         const skip = (page - 1) * limit;
         const [orders, total] = await Promise.all([
-            Order.find({ user: userId }).sort({ orderDate: -1 }).skip(skip).limit(limit),
-            Order.countDocuments({ user: userId }),
+            Order.find({ user: new Types.ObjectId(userId) }).sort({ orderDate: -1 }).skip(skip).limit(limit),
+            Order.countDocuments({ user: new Types.ObjectId(userId) }),
         ]);
         return { data: orders, total };
     },
 
-    async getOrderById(orderId: string, userId: string): Promise<IOrder> {
-        const order = await Order.findOne({ _id: orderId, user: userId });
-        if (!order) throw new AppError(404, 'Order not found');
-        return order;
-    },
-
-    async updatePaymentStatus(orderId: string, status: IOrder['paymentStatus'], transactionId?: string): Promise<IOrder> {
-        const order = await Order.findByIdAndUpdate(
-            orderId,
-            { paymentStatus: status, transactionId },
-            { new: true }
-        );
-        if (!order) throw new AppError(404, 'Order not found');
-
-        // If transitioning to completed, trigger delivery
-        if (status === 'completed') {
-            await deliverOrderItems(order);
-        }
-
-        return order;
-    },
-
-    async getAllOrders(page = 1, limit = 10, status?: string): Promise<{ data: IOrder[]; total: number }> {
+    async getAllOrders(page = 1, limit = 10, status?: string) {
         const query: any = {};
-        if (status) {
-            if (status === 'installment') {
-                query.isInstallment = true;
-            } else {
-                query.paymentStatus = status;
-            }
-        }
-
+        if (status) status === 'installment' ? query.isInstallment = true : query.paymentStatus = status;
         const skip = (page - 1) * limit;
         const [orders, total] = await Promise.all([
             Order.find(query).populate('user', 'firstName lastName email').sort({ orderDate: -1 }).skip(skip).limit(limit),
@@ -378,47 +297,37 @@ const OrderService = {
         return { data: orders, total };
     },
 
-    async payInstallment(orderId: string, userId: string, installmentNumber: number, paymentDetails: any): Promise<IOrder> {
-        const order = await Order.findOne({ _id: orderId, user: userId });
+    async getOrderById(orderId: string, userId: string) {
+        return await Order.findOne({ _id: orderId, user: new Types.ObjectId(userId) });
+    },
+
+    async updatePaymentStatus(orderId: string, status: any, transactionId?: string) {
+        const order = await Order.findByIdAndUpdate(orderId, { paymentStatus: status, transactionId }, { new: true });
         if (!order) throw new AppError(404, 'Order not found');
-        if (!order.installments) throw new AppError(400, 'This is not an installment order');
+        if (status === 'completed') await deliverOrderItems(order);
+        return order;
+    },
 
-        const installment = order.installments.find(i => i.installmentNumber === installmentNumber);
-        if (!installment) throw new AppError(404, 'Installment not found');
-        if (installment.status === 'completed') throw new AppError(400, 'Installment already paid');
-
-        // Update the specific installment with payment proof
-        installment.paymentDetails = paymentDetails;
-        installment.status = 'pending'; // Set to pending for admin approval
-
+    async payInstallment(orderId: string, userId: string, installmentNumber: number, paymentDetails: any) {
+        const order = await Order.findOne({ _id: orderId, user: new Types.ObjectId(userId) });
+        if (!order || !order.installments) throw new AppError(404, 'Order/Installment not found');
+        const inst = order.installments.find(i => i.installmentNumber === installmentNumber);
+        if (!inst) throw new AppError(404, 'Installment not found');
+        inst.paymentDetails = paymentDetails;
+        inst.status = 'pending';
         await order.save();
         return order;
     },
 
-    async approveInstallment(orderId: string, installmentNumber: number, status: 'completed' | 'failed'): Promise<IOrder> {
+    async approveInstallment(orderId: string, installmentNumber: number, status: any) {
         const order = await Order.findById(orderId);
-        if (!order) throw new AppError(404, 'Order not found');
-        if (!order.installments) throw new AppError(400, 'This is not an installment order');
-
-        const installment = order.installments.find(i => i.installmentNumber === installmentNumber);
-        if (!installment) throw new AppError(404, 'Installment not found');
-
-        installment.status = status;
-        if (status === 'completed') {
-            installment.paidAt = new Date();
-        }
-
-        // If it's the first installment and it's being completed, deliver items
-        if (installmentNumber === 1 && status === 'completed') {
-            await deliverOrderItems(order);
-        }
-
-        // Check if all installments are completed
-        const allCompleted = order.installments.every(i => i.status === 'completed');
-        if (allCompleted) {
-            order.paymentStatus = 'completed';
-        }
-
+        if (!order || !order.installments) throw new AppError(404, 'Order not found');
+        const inst = order.installments.find(i => i.installmentNumber === installmentNumber);
+        if (!inst) throw new AppError(404, 'Installment not found');
+        inst.status = status;
+        if (status === 'completed') inst.paidAt = new Date();
+        if (installmentNumber === 1 && status === 'completed') await deliverOrderItems(order);
+        if (order.installments.every(i => i.status === 'completed')) order.paymentStatus = 'completed';
         await order.save();
         return order;
     }
@@ -426,100 +335,40 @@ const OrderService = {
 
 // ==================== CONTROLLER ====================
 const OrderController = {
-    createOrder: catchAsync(async (req: Request, res: Response) => {
-        const { items, paymentMethod, paymentStatus, isInstallment, installmentCount, installments, couponCode, discountAmount, manualPaymentDetails } = req.body;
-
-        const installmentData = isInstallment ? {
-            isInstallment,
-            installmentCount,
-            installments,
-            couponCode,
-            discountAmount
-        } : {
-            couponCode,
-            discountAmount
-        };
-
-        const order = await OrderService.createOrder(
-            req.user!.userId,
-            items,
-            paymentMethod,
-            paymentStatus,
-            installmentData,
-            manualPaymentDetails
-        );
+    createOrder: catchAsync(async (req, res) => {
+        const order = await OrderService.createOrder(req.user!.userId, req.body.items, req.body.paymentMethod, req.body.paymentStatus, req.body, req.body.manualPaymentDetails);
         sendResponse(res, { statusCode: 201, success: true, message: 'Order created', data: order });
     }),
-
-    getMyOrders: catchAsync(async (req: Request, res: Response) => {
-        const page = Number(req.query.page) || 1;
-        const limit = Number(req.query.limit) || 10;
-        const result = await OrderService.getUserOrders(req.user!.userId, page, limit);
-        sendResponse(res, {
-            statusCode: 200,
-            success: true,
-            message: 'Orders fetched',
-            meta: { page, limit, total: result.total, totalPages: Math.ceil(result.total / limit) },
-            data: result.data,
-        });
+    getMyOrders: catchAsync(async (req, res) => {
+        const result = await OrderService.getUserOrders(req.user!.userId, Number(req.query.page) || 1, Number(req.query.limit) || 10);
+        sendResponse(res, { statusCode: 200, success: true, message: 'Orders fetched', data: result.data, meta: { total: result.total } });
     }),
-
-    getOrderById: catchAsync(async (req: Request, res: Response) => {
-        const order = await OrderService.getOrderById(req.params.id, req.user!.userId);
-        sendResponse(res, { statusCode: 200, success: true, message: 'Order fetched', data: order });
+    getAllOrders: catchAsync(async (req, res) => {
+        const result = await OrderService.getAllOrders(Number(req.query.page) || 1, Number(req.query.limit) || 10, req.query.status as string);
+        sendResponse(res, { statusCode: 200, success: true, message: 'Orders fetched', data: result.data, meta: { total: result.total } });
     }),
-
-    // Admin
-    getAllOrders: catchAsync(async (req: Request, res: Response) => {
-        const page = Number(req.query.page) || 1;
-        const limit = Number(req.query.limit) || 10;
-        const status = req.query.status as string | undefined;
-        const result = await OrderService.getAllOrders(page, limit, status);
-        sendResponse(res, {
-            statusCode: 200,
-            success: true,
-            message: 'Orders fetched',
-            meta: { page, limit, total: result.total, totalPages: Math.ceil(result.total / limit) },
-            data: result.data,
-        });
-    }),
-
-    updateOrderStatus: catchAsync(async (req: Request, res: Response) => {
-        const { status, transactionId } = req.body;
-        const order = await OrderService.updatePaymentStatus(req.params.id, status, transactionId);
+    updateOrderStatus: catchAsync(async (req, res) => {
+        const order = await OrderService.updatePaymentStatus(req.params.id, req.body.status, req.body.transactionId);
         sendResponse(res, { statusCode: 200, success: true, message: 'Order updated', data: order });
     }),
-
-    deleteOrder: catchAsync(async (req: Request, res: Response) => {
-        const order = await Order.findById(req.params.id);
-        if (!order) {
-            throw new AppError(404, 'Order not found');
-        }
-        await Order.findByIdAndDelete(req.params.id);
-        sendResponse(res, { statusCode: 200, success: true, message: 'Order deleted successfully', data: null });
+    deleteOrder: catchAsync(async (req, res) => {
+        const order = await Order.findByIdAndDelete(req.params.id);
+        if (!order) throw new AppError(404, 'Order not found');
+        sendResponse(res, { statusCode: 200, success: true, message: 'Order deleted', data: null });
     }),
-
-    payInstallment: catchAsync(async (req: Request, res: Response) => {
-        const { orderId, installmentNumber, paymentDetails } = req.body;
-        const order = await OrderService.payInstallment(orderId, req.user!.userId, installmentNumber, paymentDetails);
-        sendResponse(res, { statusCode: 200, success: true, message: 'Installment payment proof submitted', data: order });
+    payInstallment: catchAsync(async (req, res) => {
+        const order = await OrderService.payInstallment(req.body.orderId, req.user!.userId, req.body.installmentNumber, req.body.paymentDetails);
+        sendResponse(res, { statusCode: 200, success: true, message: 'Installment paid', data: order });
     }),
-
-    approveInstallment: catchAsync(async (req: Request, res: Response) => {
-        const { orderId, installmentNumber, status } = req.body;
-        const order = await OrderService.approveInstallment(orderId, installmentNumber, status);
-        sendResponse(res, { statusCode: 200, success: true, message: `Installment marked as ${status}`, data: order });
-    }),
+    approveInstallment: catchAsync(async (req, res) => {
+        const order = await OrderService.approveInstallment(req.body.orderId, req.body.installmentNumber, req.body.status);
+        sendResponse(res, { statusCode: 200, success: true, message: 'Installment approved', data: order });
+    })
 };
 
-// ==================== ROUTES ====================
 const router = express.Router();
-
 router.post('/', authMiddleware, validateRequest(createOrderValidation), OrderController.createOrder);
 router.get('/my', authMiddleware, OrderController.getMyOrders);
-router.get('/my/:id', authMiddleware, OrderController.getOrderById);
-
-// Admin
 router.get('/admin/all', authMiddleware, authorizeRoles('admin'), OrderController.getAllOrders);
 router.patch('/admin/:id/status', authMiddleware, authorizeRoles('admin'), OrderController.updateOrderStatus);
 router.delete('/admin/:id', authMiddleware, authorizeRoles('admin'), OrderController.deleteOrder);
@@ -528,4 +377,3 @@ router.post('/admin/approve-installment', authMiddleware, authorizeRoles('admin'
 
 export const OrderRoutes = router;
 export default OrderService;
-
