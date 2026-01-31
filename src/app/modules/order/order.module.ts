@@ -266,7 +266,8 @@ const OrderService = {
 
         try {
             await NotificationService.createNotification({
-                user: new Types.ObjectId(userId),
+                forUser: new Types.ObjectId(userId),
+                forAdmin: false,
                 title: 'Order Placed',
                 message: `Your order #${order.orderNumber} has been placed successfully.`,
                 type: 'order'
@@ -340,12 +341,16 @@ const OrderController = {
         sendResponse(res, { statusCode: 201, success: true, message: 'Order created', data: order });
     }),
     getMyOrders: catchAsync(async (req, res) => {
-        const result = await OrderService.getUserOrders(req.user!.userId, Number(req.query.page) || 1, Number(req.query.limit) || 10);
-        sendResponse(res, { statusCode: 200, success: true, message: 'Orders fetched', data: result.data, meta: { total: result.total } });
+        const page = Number(req.query.page) || 1;
+        const limit = Number(req.query.limit) || 10;
+        const result = await OrderService.getUserOrders(req.user!.userId, page, limit);
+        sendResponse(res, { statusCode: 200, success: true, message: 'Orders fetched', data: result.data, meta: { page, limit, total: result.total, totalPages: Math.ceil(result.total / limit) } });
     }),
     getAllOrders: catchAsync(async (req, res) => {
-        const result = await OrderService.getAllOrders(Number(req.query.page) || 1, Number(req.query.limit) || 10, req.query.status as string);
-        sendResponse(res, { statusCode: 200, success: true, message: 'Orders fetched', data: result.data, meta: { total: result.total } });
+        const page = Number(req.query.page) || 1;
+        const limit = Number(req.query.limit) || 10;
+        const result = await OrderService.getAllOrders(page, limit, req.query.status as string);
+        sendResponse(res, { statusCode: 200, success: true, message: 'Orders fetched', data: result.data, meta: { page, limit, total: result.total, totalPages: Math.ceil(result.total / limit) } });
     }),
     updateOrderStatus: catchAsync(async (req, res) => {
         const order = await OrderService.updatePaymentStatus(req.params.id, req.body.status, req.body.transactionId);

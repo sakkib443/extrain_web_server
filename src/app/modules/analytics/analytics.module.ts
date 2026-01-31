@@ -121,18 +121,53 @@ const AnalyticsService = {
             Software.aggregate([{ $group: { _id: null, total: { $sum: '$likeCount' } } }]),
             Course.aggregate([{ $group: { _id: null, total: { $sum: '$likeCount' } } }]),
             // Revenue aggregations
-            Order.aggregate([
-                { $match: { paymentStatus: 'completed' } },
-                { $group: { _id: null, total: { $sum: '$totalAmount' } } },
-            ]),
-            Order.aggregate([
-                { $match: { paymentStatus: 'completed', orderDate: { $gte: today } } },
-                { $group: { _id: null, total: { $sum: '$totalAmount' } } },
-            ]),
-            Order.aggregate([
-                { $match: { paymentStatus: 'completed', orderDate: { $gte: firstDayOfMonth } } },
-                { $group: { _id: null, total: { $sum: '$totalAmount' } } },
-            ]),
+            // Total Revenue
+            (async () => {
+                const [reg, inst] = await Promise.all([
+                    Order.aggregate([
+                        { $match: { isInstallment: { $ne: true }, paymentStatus: 'completed' } },
+                        { $group: { _id: null, total: { $sum: '$totalAmount' } } }
+                    ]),
+                    Order.aggregate([
+                        { $unwind: '$installments' },
+                        { $match: { 'installments.status': 'completed' } },
+                        { $group: { _id: null, total: { $sum: '$installments.amount' } } }
+                    ])
+                ]);
+                return [{ total: (reg[0]?.total || 0) + (inst[0]?.total || 0) }];
+            })(),
+
+            // Today Revenue
+            (async () => {
+                const [reg, inst] = await Promise.all([
+                    Order.aggregate([
+                        { $match: { isInstallment: { $ne: true }, paymentStatus: 'completed', orderDate: { $gte: today } } },
+                        { $group: { _id: null, total: { $sum: '$totalAmount' } } }
+                    ]),
+                    Order.aggregate([
+                        { $unwind: '$installments' },
+                        { $match: { 'installments.status': 'completed', 'installments.paidAt': { $gte: today } } },
+                        { $group: { _id: null, total: { $sum: '$installments.amount' } } }
+                    ])
+                ]);
+                return [{ total: (reg[0]?.total || 0) + (inst[0]?.total || 0) }];
+            })(),
+
+            // Monthly Revenue
+            (async () => {
+                const [reg, inst] = await Promise.all([
+                    Order.aggregate([
+                        { $match: { isInstallment: { $ne: true }, paymentStatus: 'completed', orderDate: { $gte: firstDayOfMonth } } },
+                        { $group: { _id: null, total: { $sum: '$totalAmount' } } }
+                    ]),
+                    Order.aggregate([
+                        { $unwind: '$installments' },
+                        { $match: { 'installments.status': 'completed', 'installments.paidAt': { $gte: firstDayOfMonth } } },
+                        { $group: { _id: null, total: { $sum: '$installments.amount' } } }
+                    ])
+                ]);
+                return [{ total: (reg[0]?.total || 0) + (inst[0]?.total || 0) }];
+            })(),
         ]);
 
         return {
@@ -218,28 +253,61 @@ const AnalyticsService = {
         startDate: Date,
         endDate: Date
     ): Promise<{ date: string; revenue: number; orders: number }[]> {
-        const result = await Order.aggregate([
-            {
-                $match: {
-                    paymentStatus: 'completed',
-                    orderDate: { $gte: startDate, $lte: endDate },
+        const [regularResult, installmentResult] = await Promise.all([
+            Order.aggregate([
+                {
+                    $match: {
+                        isInstallment: { $ne: true },
+                        paymentStatus: 'completed',
+                        orderDate: { $gte: startDate, $lte: endDate },
+                    },
                 },
-            },
-            {
-                $group: {
-                    _id: { $dateToString: { format: '%Y-%m-%d', date: '$orderDate' } },
-                    revenue: { $sum: '$totalAmount' },
-                    orders: { $sum: 1 },
+                {
+                    $group: {
+                        _id: { $dateToString: { format: '%Y-%m-%d', date: '$orderDate' } },
+                        revenue: { $sum: '$totalAmount' },
+                        orders: { $sum: 1 },
+                    },
                 },
-            },
-            { $sort: { _id: 1 } },
+            ]),
+            Order.aggregate([
+                { $unwind: '$installments' },
+                {
+                    $match: {
+                        'installments.status': 'completed',
+                        'installments.paidAt': { $gte: startDate, $lte: endDate },
+                    },
+                },
+                {
+                    $group: {
+                        _id: { $dateToString: { format: '%Y-%m-%d', date: '$installments.paidAt' } },
+                        revenue: { $sum: '$installments.amount' },
+                        orders: { $sum: 1 },
+                    },
+                },
+            ])
         ]);
 
-        return result.map((item) => ({
-            date: item._id,
-            revenue: item.revenue,
-            orders: item.orders,
-        }));
+        // Combine results
+        const combinedMap = new Map();
+
+        regularResult.forEach(item => {
+            combinedMap.set(item._id, { date: item._id, revenue: item.revenue, orders: item.orders });
+        });
+
+        installmentResult.forEach(item => {
+            const existing = combinedMap.get(item._id);
+            if (existing) {
+                existing.revenue += item.revenue;
+                // For installment orders, should we count them as new "orders" for daily stats?
+                // Usually these are payment events, not new orders. Let's keep orders count from regular only or add them.
+                // existing.orders += item.orders; 
+            } else {
+                combinedMap.set(item._id, { date: item._id, revenue: item.revenue, orders: 1 });
+            }
+        });
+
+        return Array.from(combinedMap.values()).sort((a, b) => a.date.localeCompare(b.date));
     },
 
     /**
@@ -301,8 +369,12 @@ const AnalyticsService = {
             const idx = monthToIdx[key];
 
             if (idx !== undefined) {
+                const amountFactor = order.isInstallment ? (order.installments?.filter((i: any) => i.status === 'completed').reduce((sum: number, i: any) => sum + (i.amount || 0), 0) / (order.totalAmount || 1)) : 1;
+
                 order.items?.forEach((item: any) => {
-                    const amount = item.price || 0;
+                    let amount = item.price || 0;
+                    if (order.isInstallment) amount = amount * amountFactor;
+
                     const productType = item.productType?.toLowerCase() || '';
                     if (categories[productType]) {
                         categories[productType][idx] += amount;
