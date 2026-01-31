@@ -490,6 +490,15 @@ const OrderController = {
         sendResponse(res, { statusCode: 200, success: true, message: 'Order updated', data: order });
     }),
 
+    deleteOrder: catchAsync(async (req: Request, res: Response) => {
+        const order = await Order.findById(req.params.id);
+        if (!order) {
+            throw new AppError(404, 'Order not found');
+        }
+        await Order.findByIdAndDelete(req.params.id);
+        sendResponse(res, { statusCode: 200, success: true, message: 'Order deleted successfully', data: null });
+    }),
+
     payInstallment: catchAsync(async (req: Request, res: Response) => {
         const { orderId, installmentNumber, paymentDetails } = req.body;
         const order = await OrderService.payInstallment(orderId, req.user!.userId, installmentNumber, paymentDetails);
@@ -513,8 +522,10 @@ router.get('/my/:id', authMiddleware, OrderController.getOrderById);
 // Admin
 router.get('/admin/all', authMiddleware, authorizeRoles('admin'), OrderController.getAllOrders);
 router.patch('/admin/:id/status', authMiddleware, authorizeRoles('admin'), OrderController.updateOrderStatus);
+router.delete('/admin/:id', authMiddleware, authorizeRoles('admin'), OrderController.deleteOrder);
 router.post('/pay-installment', authMiddleware, OrderController.payInstallment);
 router.post('/admin/approve-installment', authMiddleware, authorizeRoles('admin'), OrderController.approveInstallment);
 
 export const OrderRoutes = router;
 export default OrderService;
+
