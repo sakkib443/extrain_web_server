@@ -1,8 +1,5 @@
 {
     "version": 2,
-    "regions": [
-        "sin1"
-    ],
     "functions": {
         "src/server.ts": {
             "maxDuration": 30,
@@ -10,23 +7,6 @@
         }
     },
     "routes": [
-        {
-            "src": "/api/keep-warm",
-            "dest": "api/keep-warm.ts",
-            "methods": [
-                "GET"
-            ]
-        },
-        {
-            "src": "/api/health",
-            "dest": "src/server.ts",
-            "methods": [
-                "GET"
-            ],
-            "headers": {
-                "Cache-Control": "s-maxage=60, stale-while-revalidate=300"
-            }
-        },
         {
             "src": "/(.*)",
             "dest": "src/server.ts",
