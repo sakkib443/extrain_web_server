@@ -101,44 +101,68 @@ async function cleanupStaleIndexes() {
   }
 }
 
-// ==================== Connect DB immediately ====================
-// Vercel এ এই connection serverless function start হওয়ার সাথে সাথে শুরু হবে
-connectDB().then(() => {
-  cleanupStaleIndexes();
-}).catch((error) => {
-  console.error('❌ Initial MongoDB connection failed:', error);
+// ==================== Vercel/Serverless Database Connection ====================
+// Vercel serverless function এর জন্য request-based connection logic
+// প্রতিটা request এর আগে DB connected কিনা চেক করবে
+app.use(async (req, res, next) => {
+  if (mongoose.connection.readyState !== 1) {
+    try {
+      await connectDB();
+      // Only cleanup indexes on first connection to avoid overhead
+      if (!global.mongooseCache?.conn) {
+        cleanupStaleIndexes();
+      }
+    } catch (error) {
+      console.error('❌ Database connection error in middleware:', error);
+      // Don't block the request, let the controller handle eventual DB errors
+      // or send a 500 here if you prefer strict connection
+    }
+  }
+  next();
 });
 
 // ==================== Local Development Server ====================
 // শুধুমাত্র local development এ server চালু হবে
+// ==================== Local Development Server ====================
+// শুধুমাত্র local development এ server চালু হবে
 if (process.env.NODE_ENV !== 'production') {
-  const server = app.listen(config.port, () => {
-    console.log('');
-    console.log('╔══════════════════════════════════════════════╗');
-    console.log('║                                              ║');
-    console.log('║   🎓 MotionBoss LMS Server Started!          ║');
-    console.log('║                                              ║');
-    console.log(`║   🌐 URL: http://localhost:${config.port}               ║`);
-    console.log(`║   🔧 Environment: ${config.env.padEnd(21)}   ║`);
-    console.log('║                                              ║');
-    console.log('╚══════════════════════════════════════════════╝');
-    console.log('');
-  });
+  (async () => {
+    try {
+      await connectDB();
+      cleanupStaleIndexes();
 
-  process.on('unhandledRejection', (error: Error) => {
-    console.error('💥 UNHANDLED REJECTION! Shutting down...');
-    console.error('Error:', error.message);
-    server.close(() => {
+      const server = app.listen(config.port, () => {
+        console.log('');
+        console.log('╔══════════════════════════════════════════════╗');
+        console.log('║                                              ║');
+        console.log('║   🎓 MotionBoss LMS Server Started!          ║');
+        console.log('║                                              ║');
+        console.log(`║   🌐 URL: http://localhost:${config.port}               ║`);
+        console.log(`║   🔧 Environment: ${config.env.padEnd(21)}   ║`);
+        console.log('║                                              ║');
+        console.log('╚══════════════════════════════════════════════╝');
+        console.log('');
+      });
+
+      process.on('unhandledRejection', (error: Error) => {
+        console.error('💥 UNHANDLED REJECTION! Shutting down...');
+        console.error('Error:', error.message);
+        server.close(() => {
+          process.exit(1);
+        });
+      });
+
+      process.on('SIGTERM', () => {
+        console.log('👋 SIGTERM received. Shutting down gracefully...');
+        server.close(() => {
+          console.log('💤 Process terminated.');
+        });
+      });
+    } catch (err) {
+      console.error('❌ Failed to start server:', err);
       process.exit(1);
-    });
-  });
-
-  process.on('SIGTERM', () => {
-    console.log('👋 SIGTERM received. Shutting down gracefully...');
-    server.close(() => {
-      console.log('💤 Process terminated.');
-    });
-  });
+    }
+  })();
 }
 
 // ==================== Export for Vercel ====================
