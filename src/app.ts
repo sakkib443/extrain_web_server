@@ -53,6 +53,26 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Cookie parser (for refresh token)
 app.use(cookieParser());
 
+// ==================== Vercel Database Connection Middleware ====================
+// This MUST be here (before routes) for Vercel Serverless to work
+import mongoose from 'mongoose';
+import { connectDB, cleanupStaleIndexes } from './app/utils/dbConnect';
+
+app.use(async (req: Request, res: Response, next) => {
+  // Local development handles connection in server.ts startup
+  // But Vercel needs this middleware check for every request
+  if (mongoose.connection.readyState !== 1) {
+    try {
+      if (process.env.NODE_ENV !== 'production') console.log('🔄 Reconnecting to DB in middleware...');
+      await connectDB();
+      cleanupStaleIndexes();
+    } catch (error) {
+      console.error('❌ Database connection failed in middleware:', error);
+    }
+  }
+  next();
+});
+
 // CORS configuration - supports multiple origins for production
 const allowedOrigins = [
   config.frontend_url,
