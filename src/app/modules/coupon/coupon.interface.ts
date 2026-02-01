@@ -43,6 +43,10 @@ export interface ICoupon {
     // Status
     isActive: boolean;
 
+    // Top Header Banner settings
+    showInTopHeader?: boolean;
+    topHeaderMessage?: string;
+
     // Timestamps
     createdAt?: Date;
     updatedAt?: Date;

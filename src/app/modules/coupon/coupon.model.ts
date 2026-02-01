@@ -93,6 +93,14 @@ const couponSchema = new Schema<ICoupon, CouponModel>(
         isActive: {
             type: Boolean,
             default: true
+        },
+        showInTopHeader: {
+            type: Boolean,
+            default: false
+        },
+        topHeaderMessage: {
+            type: String,
+            default: ''
         }
     },
     {

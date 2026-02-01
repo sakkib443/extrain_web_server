@@ -71,7 +71,7 @@ const getDesignBySection = async (section: string): Promise<IDesign | null> => {
                 },
                 contactInfo: {
                     email: 'info@Extrain Web.com',
-                    phone: '+88 01730481212',
+                    phone: '+88 01753924093',
                     address: 'Daisy Garden, House 14 (Level-5), Block A, Banasree, Dhaka',
                     addressBn: 'ডেইজি গার্ডেন, বাড়ি ১৪ (লেভেল-৫), ব্লক এ, বনশ্রী, ঢাকা',
                     officeHours: 'Sat - Thu: 10:00 AM - 6:00 PM',
@@ -81,7 +81,7 @@ const getDesignBySection = async (section: string): Promise<IDesign | null> => {
                     facebook: 'https://www.facebook.com/Extrain Web',
                     youtube: 'https://www.youtube.com/@Extrain Web',
                     linkedin: 'https://www.linkedin.com/company/Extrain Web',
-                    whatsapp: 'https://wa.me/8801730481212',
+                    whatsapp: 'https://wa.me/8801753924093',
                     instagram: 'https://www.instagram.com/Extrain Web/'
                 },
                 whatsappSection: {

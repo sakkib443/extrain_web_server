@@ -52,6 +52,7 @@ export interface IWebsite {
     // Media
     images: string[];                // Screenshot URLs
     previewUrl?: string;             // Live demo URL
+    videoUrl?: string;               // YouTube video URL
     downloadFile: string;            // Secure file path/URL
 
     // Status

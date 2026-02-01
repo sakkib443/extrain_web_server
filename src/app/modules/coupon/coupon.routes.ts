@@ -19,6 +19,9 @@ router.post(
     CouponController.applyCoupon
 );
 
+// Get top header coupon
+router.get('/top-header', CouponController.getTopHeaderCoupon);
+
 // ==================== Admin Routes ====================
 
 // Get all coupons

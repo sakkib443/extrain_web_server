@@ -115,6 +115,7 @@ const softwareSchema = new Schema<ISoftware>(
         // ==================== Media ====================
         images: [{ type: String }],
         previewUrl: { type: String },
+        videoUrl: { type: String },  // YouTube video URL
         downloadFile: {
             type: String,
             required: [true, 'Download file is required'],

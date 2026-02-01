@@ -112,6 +112,7 @@ export interface ISoftware {
     // Media
     images: string[];                // Screenshot URLs
     previewUrl?: string;             // Live demo URL
+    videoUrl?: string;               // YouTube video URL
     downloadFile: string;            // Secure file path/URL
     documentationUrl?: string;       // Documentation link
 

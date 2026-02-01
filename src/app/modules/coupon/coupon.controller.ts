@@ -98,11 +98,25 @@ const applyCoupon = catchAsync(async (req: Request, res: Response) => {
     });
 });
 
+/**
+ * Get top header coupon
+ */
+const getTopHeaderCoupon = catchAsync(async (req: Request, res: Response) => {
+    const result = await CouponService.getTopHeaderCoupon();
+    sendResponse(res, {
+        statusCode: 200,
+        success: true,
+        message: 'Top header coupon retrieved successfully',
+        data: result
+    });
+});
+
 export const CouponController = {
     createCoupon,
     getAllCoupons,
     getCouponById,
     updateCoupon,
     deleteCoupon,
-    applyCoupon
+    applyCoupon,
+    getTopHeaderCoupon
 };

@@ -202,6 +202,23 @@ const useCoupon = async (couponId: string): Promise<void> => {
     await Coupon.findByIdAndUpdate(couponId, { $inc: { usedCount: 1 } });
 };
 
+/**
+ * Get the active top header coupon
+ */
+const getTopHeaderCoupon = async (): Promise<ICoupon | null> => {
+    const now = new Date();
+    return Coupon.findOne({
+        showInTopHeader: true,
+        isActive: true,
+        startDate: { $lte: now },
+        endDate: { $gte: now },
+        $or: [
+            { usageLimit: null },
+            { $expr: { $lt: ['$usedCount', '$usageLimit'] } }
+        ]
+    }).sort({ updatedAt: -1 });
+};
+
 export const CouponService = {
     createCoupon,
     getAllCoupons,
@@ -210,5 +227,6 @@ export const CouponService = {
     updateCoupon,
     deleteCoupon,
     applyCoupon,
-    useCoupon
+    useCoupon,
+    getTopHeaderCoupon
 };

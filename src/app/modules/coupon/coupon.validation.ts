@@ -32,7 +32,9 @@ const createCouponZodSchema = z.object({
         usagePerUser: z.number().min(1).optional(),
         applicableTo: z.enum(['all', 'course', 'website', 'software']).optional(),
         specificProducts: z.array(z.string()).optional(),
-        isActive: z.boolean().optional()
+        isActive: z.boolean().optional(),
+        showInTopHeader: z.boolean().optional(),
+        topHeaderMessage: z.string().optional()
     })
 });
 
@@ -55,7 +57,9 @@ const updateCouponZodSchema = z.object({
         usagePerUser: z.number().min(1).optional(),
         applicableTo: z.enum(['all', 'course', 'website', 'software']).optional(),
         specificProducts: z.array(z.string()).optional(),
-        isActive: z.boolean().optional()
+        isActive: z.boolean().optional(),
+        showInTopHeader: z.boolean().optional(),
+        topHeaderMessage: z.string().optional()
     })
 });
 

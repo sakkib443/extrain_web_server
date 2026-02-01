@@ -149,7 +149,7 @@ const contactContentSchema = new Schema({
     },
     contactInfo: {
         email: { type: String, default: 'info@Extrain Web.com' },
-        phone: { type: String, default: '+88 01730481212' },
+        phone: { type: String, default: '+88 01753924093' },
         address: { type: String, default: 'Daisy Garden, House 14 (Level-5), Block A, Banasree, Dhaka' },
         addressBn: { type: String, default: 'ডেইজি গার্ডেন, বাড়ি ১৪ (লেভেল-৫), ব্লক এ, বনশ্রী, ঢাকা' },
         officeHours: { type: String, default: 'Sat - Thu: 10:00 AM - 6:00 PM' },
@@ -159,7 +159,7 @@ const contactContentSchema = new Schema({
         facebook: { type: String, default: 'https://www.facebook.com/Extrain Web' },
         youtube: { type: String, default: 'https://www.youtube.com/@Extrain Web' },
         linkedin: { type: String, default: 'https://www.linkedin.com/company/Extrain Web' },
-        whatsapp: { type: String, default: 'https://wa.me/8801730481212' },
+        whatsapp: { type: String, default: 'https://wa.me/8801753924093' },
         instagram: { type: String, default: 'https://www.instagram.com/Extrain Web/' }
     },
     whatsappSection: {
