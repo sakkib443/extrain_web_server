@@ -13,14 +13,49 @@ import AppError from '../utils/AppError';
  * Zod দিয়ে validation fail হলে এই format এ error message তৈরি হবে
  */
 const handleZodError = (err: ZodError) => {
-  const errors = err.issues.map((issue) => ({
-    path: issue.path.join('.'),
-    message: issue.message,
-  }));
+  const errors = err.issues.map((issue) => {
+    // Clean up the path - remove 'body.' prefix for cleaner messages
+    let path = issue.path.join('.');
+    if (path.startsWith('body.')) {
+      path = path.replace('body.', '');
+    }
+
+    // Create user-friendly field names
+    const fieldNames: { [key: string]: string } = {
+      'code': 'Coupon Code',
+      'name': 'Coupon Name',
+      'discountType': 'Discount Type',
+      'discountValue': 'Discount Value',
+      'maxDiscount': 'Maximum Discount',
+      'minPurchase': 'Minimum Purchase',
+      'installmentEnabled': 'Installment Enabled',
+      'installmentCount': 'Installment Count',
+      'installmentIntervalDays': 'Installment Interval',
+      'startDate': 'Start Date',
+      'endDate': 'End Date',
+      'usageLimit': 'Usage Limit',
+      'usagePerUser': 'Per User Limit',
+      'applicableTo': 'Applicable To',
+      'isActive': 'Active Status'
+    };
+
+    const friendlyFieldName = fieldNames[path] || path;
+
+    return {
+      path: path,
+      message: path ? `${friendlyFieldName}: ${issue.message}` : issue.message,
+    };
+  });
+
+  // Create a summary message
+  const fieldList = errors.map(e => e.path).filter(p => p).join(', ');
+  const summaryMessage = fieldList
+    ? `Validation Error in: ${fieldList}`
+    : 'Validation Error';
 
   return {
     statusCode: 400,
-    message: 'Validation Error',
+    message: summaryMessage,
     errorMessages: errors,
   };
 };

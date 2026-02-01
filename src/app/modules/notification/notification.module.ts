@@ -106,6 +106,52 @@ export const NotificationService = {
         });
     },
 
+    // Create installment payment notification
+    async createInstallmentNotification(data: {
+        orderId: Types.ObjectId;
+        userId: Types.ObjectId;
+        userName: string;
+        amount: number;
+        installmentNumber: number;
+        productName: string;
+        isBooking?: boolean;
+    }): Promise<INotification> {
+        return this.createNotification({
+            type: 'order',
+            title: data.isBooking ? 'New Booking Payment! 🎁' : 'New Installment Payment! 💸',
+            message: `${data.userName} paid ৳${data.amount} for installment #${data.installmentNumber} of "${data.productName}"`,
+            data: {
+                orderId: data.orderId,
+                userId: data.userId,
+                amount: data.amount,
+                link: `/dashboard/admin/orders`,
+            },
+            forAdmin: true,
+        });
+    },
+
+    // Create installment approval notification for user
+    async createUserInstallmentApprovalNotification(data: {
+        userId: Types.ObjectId;
+        amount: number;
+        installmentNumber: number;
+        status: 'completed' | 'failed';
+        productName: string;
+    }): Promise<INotification> {
+        return this.createNotification({
+            type: 'order',
+            title: data.status === 'completed' ? 'Payment Approved! ✅' : 'Payment Rejected! ❌',
+            message: data.status === 'completed'
+                ? `Your payment of ৳${data.amount} for installment #${data.installmentNumber} of "${data.productName}" has been approved.`
+                : `Your payment of ৳${data.amount} for installment #${data.installmentNumber} of "${data.productName}" was rejected. Please contact support.`,
+            forAdmin: false,
+            forUser: data.userId,
+            data: {
+                link: `/dashboard/user/purchases`,
+            }
+        });
+    },
+
     // Create enrollment notification
     async createEnrollmentNotification(enrollData: {
         enrollmentId: Types.ObjectId;

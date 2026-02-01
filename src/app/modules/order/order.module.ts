@@ -317,6 +317,19 @@ const OrderService = {
         inst.paymentDetails = paymentDetails;
         inst.status = 'pending';
         await order.save();
+
+        // Trigger notification for admin
+        const populatedUser = await User.findById(userId);
+        await NotificationService.createInstallmentNotification({
+            orderId: order._id as Types.ObjectId,
+            userId: new Types.ObjectId(userId),
+            userName: populatedUser ? `${populatedUser.firstName} ${populatedUser.lastName}` : 'A User',
+            amount: installment.amount,
+            installmentNumber: installment.installmentNumber,
+            productName: order.items[0]?.title || 'Product',
+            isBooking: order.isBooking
+        });
+
         return order;
     },
 
@@ -330,6 +343,16 @@ const OrderService = {
         if (installmentNumber === 1 && status === 'completed') await deliverOrderItems(order);
         if (order.installments.every(i => i.status === 'completed')) order.paymentStatus = 'completed';
         await order.save();
+
+        // Trigger notification for user
+        await NotificationService.createUserInstallmentApprovalNotification({
+            userId: order.user,
+            amount: installment.amount,
+            installmentNumber: installment.installmentNumber,
+            status: status,
+            productName: order.items[0]?.title || 'Product'
+        });
+
         return order;
     }
 };
