@@ -94,10 +94,7 @@ const couponSchema = new Schema<ICoupon, CouponModel>(
             type: Boolean,
             default: true
         },
-<<<<<<< HEAD
-=======
         // Top Header Banner Settings
->>>>>>> 4a8b828 (Fix coupon validation: add preprocess for string-to-number conversion, add showInTopHeader fields, improve error messages)
         showInTopHeader: {
             type: Boolean,
             default: false

@@ -43,11 +43,7 @@ export interface ICoupon {
     // Status
     isActive: boolean;
 
-<<<<<<< HEAD
-    // Top Header Banner settings
-=======
     // Top Header Banner Settings
->>>>>>> 4a8b828 (Fix coupon validation: add preprocess for string-to-number conversion, add showInTopHeader fields, improve error messages)
     showInTopHeader?: boolean;
     topHeaderMessage?: string;
 

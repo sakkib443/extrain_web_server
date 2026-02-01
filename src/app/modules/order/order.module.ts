@@ -324,10 +324,10 @@ const OrderService = {
             orderId: order._id as Types.ObjectId,
             userId: new Types.ObjectId(userId),
             userName: populatedUser ? `${populatedUser.firstName} ${populatedUser.lastName}` : 'A User',
-            amount: installment.amount,
-            installmentNumber: installment.installmentNumber,
+            amount: inst.amount,
+            installmentNumber: inst.installmentNumber,
             productName: order.items[0]?.title || 'Product',
-            isBooking: order.isBooking
+            isBooking: order.isInstallment || false
         });
 
         return order;
@@ -347,8 +347,8 @@ const OrderService = {
         // Trigger notification for user
         await NotificationService.createUserInstallmentApprovalNotification({
             userId: order.user,
-            amount: installment.amount,
-            installmentNumber: installment.installmentNumber,
+            amount: inst.amount,
+            installmentNumber: inst.installmentNumber,
             status: status,
             productName: order.items[0]?.title || 'Product'
         });
