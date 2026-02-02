@@ -28,10 +28,6 @@ import { DownloadRoutes } from './app/modules/download/download.module';
 import { BkashRoutes } from './app/modules/bkash/bkash.module';
 import { AnalyticsRoutes } from './app/modules/analytics/analytics.module';
 import { uploadRoutes } from './app/modules/upload/upload.routes';
-import { CourseRoutes } from './app/modules/course/course.routes';
-import { LessonRoutes } from './app/modules/lesson/lesson.routes';
-import { ModuleRoutes } from './app/modules/module/module.routes';
-import { EnrollmentRoutes } from './app/modules/enrollment/enrollment.routes';
 import { NotificationRoutes } from './app/modules/notification/notification.module';
 import { DesignRoutes } from './app/modules/design/design.routes';
 import { StatsRoutes } from './app/modules/stats/stats.routes';
@@ -113,7 +109,7 @@ app.use(
 app.get('/', (req: Request, res: Response) => {
   res.status(200).json({
     success: true,
-    message: '🚀 ejobs it LMS API Server is running!',
+    message: '🚀 Extrain Web API Server is running!',
     version: '1.0.0',
     environment: config.env,
     timestamp: new Date().toISOString(),
@@ -147,18 +143,6 @@ app.use('/api/websites', WebsiteRoutes);
 
 // Software product routes (scripts & plugins marketplace)
 app.use('/api/software', SoftwareRoutes);
-
-// Course routes (LMS - public + admin)
-app.use('/api/courses', CourseRoutes);
-
-// Module routes (LMS - public + admin)
-app.use('/api/modules', ModuleRoutes);
-
-// Lesson routes (LMS - public + admin)
-app.use('/api/lessons', LessonRoutes);
-
-// Enrollment routes (LMS - authenticated)
-app.use('/api/enrollments', EnrollmentRoutes);
 
 // Cart routes (authenticated)
 app.use('/api/cart', CartRoutes);
