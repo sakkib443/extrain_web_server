@@ -56,6 +56,31 @@ const AuthController = {
     });
   }),
 
+  // ==================== GOOGLE LOGIN ====================
+  /**
+   * POST /api/auth/google-login
+   * Login/Register with Google
+   * Google দিয়ে login/register করা
+   */
+  googleLogin: catchAsync(async (req: Request, res: Response) => {
+    const result = await AuthService.googleLogin(req.body);
+
+    res.cookie('refreshToken', result.tokens.refreshToken, {
+      httpOnly: true,
+      secure: config.env === 'production',
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
+    sendResponse(res, {
+      statusCode: 200,
+      success: true,
+      message: 'Logged in with Google successfully',
+      data: result,
+    });
+  }),
+
+
   // ==================== REFRESH TOKEN ====================
   /**
    * POST /api/auth/refresh-token

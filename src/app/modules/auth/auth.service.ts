@@ -135,6 +135,68 @@ const AuthService = {
         };
     },
 
+    // ==================== GOOGLE LOGIN ====================
+    /**
+     * Social login with Google
+     * Google দিয়ে লগইন বা রেজিস্টার করা
+     */
+    async googleLogin(payload: {
+        email: string;
+        firstName: string;
+        lastName: string;
+        avatar?: string;
+    }): Promise<IAuthResponse> {
+        const { email, firstName, lastName, avatar } = payload;
+
+        // Find user
+        let user = await User.findOne({ email, isDeleted: false });
+
+        // If user doesn't exist, create one
+        if (!user) {
+            // Social users might not have a password, but the model requires it
+            // Generate a random stable password or just a random string
+            const randomPassword = crypto.randomBytes(16).toString('hex');
+
+            user = await User.create({
+                email,
+                firstName: firstName || 'Google',
+                lastName: lastName || 'User',
+                password: randomPassword,
+                avatar: avatar || '',
+                role: 'student',
+                status: 'active',
+                isEmailVerified: true, // Google accounts are verified
+            });
+        }
+
+        // Check if user is blocked
+        if (user.status === 'blocked') {
+            throw new AppError(403, 'Your account has been blocked. Contact support.');
+        }
+
+        // Generate tokens
+        const jwtPayload: IJwtPayload = {
+            userId: user._id!.toString(),
+            email: user.email,
+            role: user.role,
+        };
+
+        const tokens = this.generateTokens(jwtPayload);
+
+        return {
+            user: {
+                _id: user._id!.toString(),
+                email: user.email,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                role: user.role,
+                avatar: user.avatar,
+            },
+            tokens,
+        };
+    },
+
+
     // ==================== REFRESH TOKEN ====================
     /**
      * Generate new access token using refresh token

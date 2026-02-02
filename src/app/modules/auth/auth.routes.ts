@@ -45,6 +45,15 @@ router.post(
 );
 
 /**
+ * POST /api/auth/google-login
+ * Login or Register with Google Info
+ */
+router.post(
+    '/google-login',
+    AuthController.googleLogin
+);
+
+/**
  * POST /api/auth/refresh-token
  * Get new access token using refresh token
  * নতুন access token নেওয়া
