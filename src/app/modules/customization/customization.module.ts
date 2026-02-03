@@ -258,7 +258,7 @@ const CustomizationService = {
 const CustomizationController = {
     // User: Create request
     createRequest: catchAsync(async (req: Request, res: Response) => {
-        const userId = (req as any).user._id;
+        const userId = (req as any).user.userId || (req as any).user._id;
         const request = await CustomizationService.createRequest(userId, req.body);
 
         sendResponse(res, {
@@ -271,7 +271,7 @@ const CustomizationController = {
 
     // User: Get my requests
     getMyRequests: catchAsync(async (req: Request, res: Response) => {
-        const userId = (req as any).user._id;
+        const userId = (req as any).user.userId || (req as any).user._id;
         const result = await CustomizationService.getMyRequests(userId, req.query);
 
         sendResponse(res, {
@@ -289,7 +289,7 @@ const CustomizationController = {
 
     // User: Get single request
     getMyRequestById: catchAsync(async (req: Request, res: Response) => {
-        const userId = (req as any).user._id;
+        const userId = (req as any).user.userId || (req as any).user._id;
         const request = await CustomizationService.getRequestById(req.params.id, userId);
 
         if (!request) {
@@ -310,7 +310,7 @@ const CustomizationController = {
 
     // User: Add items to request
     addItems: catchAsync(async (req: Request, res: Response) => {
-        const userId = (req as any).user._id;
+        const userId = (req as any).user.userId || (req as any).user._id;
         const request = await CustomizationService.addRequestItems(req.params.id, userId, req.body.items);
 
         if (!request) {
