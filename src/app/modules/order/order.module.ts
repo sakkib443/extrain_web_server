@@ -380,9 +380,29 @@ const OrderController = {
         sendResponse(res, { statusCode: 200, success: true, message: 'Order updated', data: order });
     }),
     deleteOrder: catchAsync(async (req, res) => {
-        const order = await Order.findByIdAndDelete(req.params.id);
+        const order = await Order.findById(req.params.id);
         if (!order) throw new AppError(404, 'Order not found');
-        sendResponse(res, { statusCode: 200, success: true, message: 'Order deleted', data: null });
+
+        // Delete related downloads
+        try {
+            const { Download } = await import('../download/download.module');
+            await Download.deleteMany({ orderId: order._id });
+        } catch (err) {
+            console.error('Error deleting downloads:', err);
+        }
+
+        // Delete related enrollments for courses
+        try {
+            const { Enrollment } = await import('../enrollment/enrollment.model');
+            await Enrollment.deleteMany({ orderId: order._id });
+        } catch (err) {
+            console.error('Error deleting enrollments:', err);
+        }
+
+        // Delete the order
+        await Order.findByIdAndDelete(req.params.id);
+
+        sendResponse(res, { statusCode: 200, success: true, message: 'Order and related data deleted', data: null });
     }),
     payInstallment: catchAsync(async (req, res) => {
         const order = await OrderService.payInstallment(req.body.orderId, req.user!.userId, req.body.installmentNumber, req.body.paymentDetails);

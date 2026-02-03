@@ -4,14 +4,13 @@
 // ===================================================================
 
 import { User } from '../user/user.model';
-import { Course } from '../course/course.model';
 import { Website } from '../website/website.model';
 import { Software } from '../software/software.model';
-import { Enrollment } from '../enrollment/enrollment.model';
 import { Review } from '../review/review.module';
 
 /**
  * Get real-time dashboard stats from database
+ * Note: Course and Enrollment modules have been removed
  */
 const getDashboardStats = async () => {
     try {
@@ -19,7 +18,6 @@ const getDashboardStats = async () => {
         const totalUsers = await User.countDocuments({ isDeleted: { $ne: true } });
 
         // Count all products (approved/published status or all non-deleted)
-        const totalCourses = await Course.countDocuments({ status: 'published' });
         // Websites and Software use 'approved' status
         const totalWebsites = await Website.countDocuments({ status: 'approved', isDeleted: { $ne: true } });
         const totalSoftware = await Software.countDocuments({ status: 'approved', isDeleted: { $ne: true } });
@@ -27,12 +25,8 @@ const getDashboardStats = async () => {
         // Also count all (including pending) for better results if no approved items
         const allWebsites = await Website.countDocuments({ isDeleted: { $ne: true } });
         const allSoftware = await Software.countDocuments({ isDeleted: { $ne: true } });
-        const allCourses = await Course.countDocuments({});
 
-        const totalProducts = (totalCourses || allCourses) + (totalWebsites || allWebsites) + (totalSoftware || allSoftware);
-
-        // Count total enrollments/downloads
-        const totalEnrollments = await Enrollment.countDocuments({});
+        const totalProducts = (totalWebsites || allWebsites) + (totalSoftware || allSoftware);
 
         // Calculate average rating from reviews
         const reviewStats = await Review.aggregate([
@@ -45,16 +39,16 @@ const getDashboardStats = async () => {
 
         return {
             activeUsers: totalUsers,
-            downloads: totalEnrollments,
+            downloads: 0, // Enrollment module removed
             avgRating: Math.round(avgRating * 10) / 10, // Round to 1 decimal
             totalProducts: totalProducts,
             // Extra details - use all counts to show actual data
             breakdown: {
-                courses: allCourses || totalCourses,
+                courses: 0, // Course module removed
                 websites: allWebsites || totalWebsites,
                 software: allSoftware || totalSoftware,
                 users: totalUsers,
-                enrollments: totalEnrollments,
+                enrollments: 0, // Enrollment module removed
                 reviews: totalReviews
             }
         };

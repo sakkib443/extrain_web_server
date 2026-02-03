@@ -1,6 +1,6 @@
 // ===================================================================
 // MotionBoss LMS - Analytics & Reports Module
-// Dashboard Analytics, Revenue Reports, LMS Stats
+// Dashboard Analytics, Revenue Reports, Marketplace Stats
 // ===================================================================
 
 import { Request, Response } from 'express';
@@ -12,26 +12,23 @@ import { Order } from '../order/order.module';
 import { BkashPayment } from '../bkash/bkash.module';
 import { User } from '../user/user.model';
 import { Website } from '../website/website.model';
-import { Course } from '../course/course.model';
-import { Lesson } from '../lesson/lesson.model';
-import { Enrollment } from '../enrollment/enrollment.model';
 
 // ==================== SERVICE ====================
 const AnalyticsService = {
     /**
      * Dashboard Summary - Admin dashboard এর জন্য সব stats একসাথে
-     * LMS + Marketplace data combined
+     * Marketplace data only (Course/LMS modules removed)
      */
     async getDashboardSummary(): Promise<{
         // User Stats
         totalUsers: number;
         totalStudents: number;
         newUsersThisMonth: number;
-        // Course Stats
+        // Course Stats (now always 0 - modules removed)
         totalCourses: number;
         publishedCourses: number;
         totalLessons: number;
-        // Enrollment Stats
+        // Enrollment Stats (now always 0 - modules removed)
         totalEnrollments: number;
         activeEnrollments: number;
         completedEnrollments: number;
@@ -65,15 +62,6 @@ const AnalyticsService = {
             totalUsers,
             totalStudents,
             newUsersThisMonth,
-            // Course counts
-            totalCourses,
-            publishedCourses,
-            totalLessons,
-            // Enrollment counts
-            totalEnrollments,
-            activeEnrollments,
-            completedEnrollments,
-            enrollmentsThisMonth,
             // Product counts
             totalWebsites,
             totalSoftware,
@@ -87,7 +75,6 @@ const AnalyticsService = {
             // Engagement (Sum of likeCount)
             websiteLikes,
             softwareLikes,
-            courseLikes,
             // Revenue aggregations
             totalRevenueResult,
             todayRevenueResult,
@@ -97,15 +84,6 @@ const AnalyticsService = {
             User.countDocuments({ isDeleted: false }),
             User.countDocuments({ role: 'student', isDeleted: false }),
             User.countDocuments({ createdAt: { $gte: firstDayOfMonth }, isDeleted: false }),
-            // Course queries
-            Course.countDocuments({}),
-            Course.countDocuments({ status: 'published' }),
-            Lesson.countDocuments({ isPublished: true }),
-            // Enrollment queries
-            Enrollment.countDocuments({}),
-            Enrollment.countDocuments({ status: 'active' }),
-            Enrollment.countDocuments({ status: 'completed' }),
-            Enrollment.countDocuments({ enrolledAt: { $gte: firstDayOfMonth } }),
             // Product queries
             Website.countDocuments({ isDeleted: false }),
             Software.countDocuments({ isDeleted: false }),
@@ -119,7 +97,6 @@ const AnalyticsService = {
             // Engagement (Sum of likeCount)
             Website.aggregate([{ $group: { _id: null, total: { $sum: '$likeCount' } } }]),
             Software.aggregate([{ $group: { _id: null, total: { $sum: '$likeCount' } } }]),
-            Course.aggregate([{ $group: { _id: null, total: { $sum: '$likeCount' } } }]),
             // Revenue aggregations
             // Total Revenue
             (async () => {
@@ -175,15 +152,15 @@ const AnalyticsService = {
             totalUsers,
             totalStudents,
             newUsersThisMonth,
-            // Course Stats
-            totalCourses,
-            publishedCourses,
-            totalLessons,
-            // Enrollment Stats
-            totalEnrollments,
-            activeEnrollments,
-            completedEnrollments,
-            enrollmentsThisMonth,
+            // Course Stats (modules removed - returning 0)
+            totalCourses: 0,
+            publishedCourses: 0,
+            totalLessons: 0,
+            // Enrollment Stats (modules removed - returning 0)
+            totalEnrollments: 0,
+            activeEnrollments: 0,
+            completedEnrollments: 0,
+            enrollmentsThisMonth: 0,
             // Product Stats
             totalWebsites,
             totalSoftware,
@@ -198,7 +175,7 @@ const AnalyticsService = {
             // Category Stats
             totalCategories,
             // Engagement
-            totalLikes: (websiteLikes[0]?.total || 0) + (softwareLikes[0]?.total || 0) + (courseLikes[0]?.total || 0),
+            totalLikes: (websiteLikes[0]?.total || 0) + (softwareLikes[0]?.total || 0),
         };
     },
 
