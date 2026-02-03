@@ -32,7 +32,7 @@ import { NotificationRoutes } from './app/modules/notification/notification.modu
 import { DesignRoutes } from './app/modules/design/design.routes';
 import { StatsRoutes } from './app/modules/stats/stats.routes';
 import { CouponRoutes } from './app/modules/coupon/coupon.routes';
-import { SiteContentRoutes } from './app/modules/siteContent/siteContent.routes';
+
 import { PageContentRoutes } from './app/modules/pageContent/pageContent.routes';
 import { BlogRoutes } from './app/modules/blog/blog.routes';
 import { CustomizationRoutes } from './app/modules/customization/customization.module';
@@ -181,8 +181,7 @@ app.use('/api/stats', StatsRoutes);
 // Coupon routes (discount codes)
 app.use('/api/coupons', CouponRoutes);
 
-// Site Content routes (editable website content)
-app.use('/api/site-content', SiteContentRoutes);
+
 
 // Page Content routes (dynamic page content management)
 app.use('/api/page-content', PageContentRoutes);
