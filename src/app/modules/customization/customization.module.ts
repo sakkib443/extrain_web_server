@@ -13,6 +13,7 @@ import { authMiddleware, authorizeRoles } from '../../middlewares/auth';
 
 // ==================== INTERFACES ====================
 interface IRequestItem {
+    _id?: mongoose.Types.ObjectId;
     itemNumber: number;
     sectionName: string;
     editType: 'text' | 'image' | 'design' | 'functionality' | 'contact' | 'other';
@@ -282,7 +283,8 @@ const CustomizationController = {
             meta: {
                 total: result.total,
                 page: Number(req.query.page) || 1,
-                limit: Number(req.query.limit) || 10
+                limit: Number(req.query.limit) || 10,
+                totalPages: Math.ceil(result.total / (Number(req.query.limit) || 10))
             }
         });
     }),
@@ -337,12 +339,12 @@ const CustomizationController = {
             statusCode: 200,
             success: true,
             message: 'সকল কাস্টমাইজেশন রিকোয়েস্ট',
-            data: result.requests,
+            data: { requests: result.requests, stats: result.stats },
             meta: {
                 total: result.total,
-                stats: result.stats,
                 page: Number(req.query.page) || 1,
-                limit: Number(req.query.limit) || 10
+                limit: Number(req.query.limit) || 10,
+                totalPages: Math.ceil(result.total / (Number(req.query.limit) || 10))
             }
         });
     }),

@@ -80,9 +80,8 @@ const ReviewService = {
 
         // Check if user has purchased the product
         if (data.productType === 'course') {
-            const { Enrollment } = await import('../enrollment/enrollment.model');
-            const enrollment = await Enrollment.findOne({ student: userId, course: data.product });
-            if (enrollment) isVerifiedPurchase = true;
+            // Enrollment module removed - courses no longer sold
+            isVerifiedPurchase = false;
         } else {
             const { Order } = await import('../order/order.module');
             const order = await Order.findOne({
@@ -141,8 +140,8 @@ const ReviewService = {
                     const { Software } = await import('../software/software.model');
                     productDetails = await Software.findById(review.product).select('title slug thumbnail images');
                 } else if (review.productType === 'course') {
-                    const { Course } = await import('../course/course.model');
-                    productDetails = await Course.findById(review.product).select('title slug thumbnail image');
+                    // Course module removed - skip course product details
+                    productDetails = null;
                 }
             } catch (err) {
                 console.error(`Failed to fetch product for review ${review._id}`, err);
@@ -178,8 +177,8 @@ const ReviewService = {
                     const { Software } = await import('../software/software.model');
                     productDetails = await Software.findById(review.product).select('title slug');
                 } else if (review.productType === 'course') {
-                    const { Course } = await import('../course/course.model');
-                    productDetails = await Course.findById(review.product).select('title slug');
+                    // Course module removed - skip course product details
+                    productDetails = null;
                 }
             } catch (err) {
                 console.error(`Failed to fetch product for review ${review._id}`, err);
@@ -218,8 +217,8 @@ const ReviewService = {
         const count = stats[0]?.count || 0;
 
         if (productType === 'course') {
-            const { Course } = await import('../course/course.model');
-            await Course.findByIdAndUpdate(productId, { averageRating: avgRating, totalReviews: count });
+            // Course module removed - skip course stat sync
+            console.log('Skipping course stats sync - module removed');
         } else if (productType === 'website') {
             const { Website } = await import('../website/website.model');
             await Website.findByIdAndUpdate(productId, { rating: avgRating, reviewCount: count });

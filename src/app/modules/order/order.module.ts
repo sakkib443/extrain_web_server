@@ -191,14 +191,8 @@ const deliverOrderItems = async (order: any, rawItems?: any[]): Promise<void> =>
             const productId = item.product || item.productId;
 
             if (item.productType === 'course') {
-                const { EnrollmentService } = await import('../enrollment/enrollment.service');
-                const { Course } = await import('../course/course.model');
-                try {
-                    await EnrollmentService.enrollStudent(userId, productId.toString(), order._id!.toString());
-                    await Course.findByIdAndUpdate(productId, { $inc: { totalEnrollments: 1 } });
-                } catch (enrollError: any) {
-                    if (enrollError.statusCode !== 400) console.error(`Enrollment failed:`, enrollError);
-                }
+                // Course module removed - skip course delivery
+                console.log('Skipping course delivery - module removed');
             } else if (item.productType === 'website') {
                 const { Website } = await import('../website/website.model');
                 await Website.findByIdAndUpdate(productId, { $inc: { salesCount: 1 } });
@@ -391,13 +385,8 @@ const OrderController = {
             console.error('Error deleting downloads:', err);
         }
 
-        // Delete related enrollments for courses
-        try {
-            const { Enrollment } = await import('../enrollment/enrollment.model');
-            await Enrollment.deleteMany({ orderId: order._id });
-        } catch (err) {
-            console.error('Error deleting enrollments:', err);
-        }
+        // Delete related enrollments for courses (module removed)
+        // Enrollment module has been removed, skipping
 
         // Delete the order
         await Order.findByIdAndDelete(req.params.id);
