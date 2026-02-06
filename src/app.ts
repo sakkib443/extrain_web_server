@@ -36,6 +36,7 @@ import { CouponRoutes } from './app/modules/coupon/coupon.routes';
 import { PageContentRoutes } from './app/modules/pageContent/pageContent.routes';
 import { BlogRoutes } from './app/modules/blog/blog.routes';
 import { CustomizationRoutes } from './app/modules/customization/customization.module';
+import { TestimonialRoutes } from './app/modules/testimonial/testimonial.routes';
 
 // ==================== App Initialization ====================
 const app: Application = express();
@@ -191,6 +192,9 @@ app.use('/api/blogs', BlogRoutes);
 
 // Customization Request routes (user can request website changes)
 app.use('/api/customization', CustomizationRoutes);
+
+// Testimonial routes (client testimonials and reviews)
+app.use('/api/testimonials', TestimonialRoutes);
 
 // ==================== Error Handling ====================
 // 404 Not Found handler (must be after all routes)
