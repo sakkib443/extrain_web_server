@@ -1,11 +1,55 @@
 {
     "version": 2,
+    "regions": [
+        "sin1"
+    ],
     "functions": {
         "src/server.ts": {
             "maxDuration": 30,
             "memory": 1024
         }
     },
+    "headers": [
+        {
+            "source": "/api/(.*)",
+            "headers": [
+                {
+                    "key": "Cache-Control",
+                    "value": "s-maxage=60, stale-while-revalidate=300"
+                },
+                {
+                    "key": "Access-Control-Allow-Origin",
+                    "value": "*"
+                },
+                {
+                    "key": "Access-Control-Allow-Methods",
+                    "value": "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+                },
+                {
+                    "key": "Access-Control-Allow-Headers",
+                    "value": "Content-Type, Authorization"
+                }
+            ]
+        },
+        {
+            "source": "/api/websites(.*)",
+            "headers": [
+                {
+                    "key": "Cache-Control",
+                    "value": "s-maxage=120, stale-while-revalidate=600"
+                }
+            ]
+        },
+        {
+            "source": "/api/categories(.*)",
+            "headers": [
+                {
+                    "key": "Cache-Control",
+                    "value": "s-maxage=300, stale-while-revalidate=86400"
+                }
+            ]
+        }
+    ],
     "routes": [
         {
             "src": "/(.*)",
@@ -17,12 +61,7 @@
                 "PATCH",
                 "DELETE",
                 "OPTIONS"
-            ],
-            "headers": {
-                "Access-Control-Allow-Origin": "*",
-                "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
-                "Access-Control-Allow-Headers": "Content-Type, Authorization"
-            }
+            ]
         }
     ]
 }

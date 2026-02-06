@@ -42,18 +42,20 @@ export async function connectDB(): Promise<typeof mongoose> {
         const opts: mongoose.ConnectOptions = {
             // bufferCommands: true so queries wait for connection
             bufferCommands: true,
-            // Increased pool size for better concurrent request handling
-            maxPoolSize: process.env.NODE_ENV === 'production' ? 5 : 10,
-            minPoolSize: process.env.NODE_ENV === 'production' ? 1 : 2,
-            // Reduced timeouts for faster response
-            serverSelectionTimeoutMS: 5000, // 5s timeout (was 15s)
-            socketTimeoutMS: 10000, // 10s (was 30s)
-            connectTimeoutMS: 5000, // 5s (was 15s)
-            // Faster heartbeat for connection health
-            heartbeatFrequencyMS: 10000,
-            // Retry writes on network errors
+            // Minimal pool for Vercel serverless (reduces cold start time)
+            maxPoolSize: process.env.NODE_ENV === 'production' ? 3 : 10,
+            minPoolSize: 1,
+            // Aggressive timeouts for faster response/failure
+            serverSelectionTimeoutMS: 3000, // 3s for faster failure
+            socketTimeoutMS: 8000, // 8s socket timeout
+            connectTimeoutMS: 3000, // 3s connect timeout
+            // Faster heartbeat
+            heartbeatFrequencyMS: 5000,
+            // Retry on network errors
             retryWrites: true,
             retryReads: true,
+            // Compress data for faster transfer
+            compressors: ['zlib'],
         };
 
         if (process.env.NODE_ENV !== 'production') {
