@@ -1,5 +1,5 @@
 // ===================================================================
-// ejobs it LMS - Main Application File
+// Extrain Web - Main Application File
 // Express app setup with all routes and middleware
 // মূল এপ্লিকেশন ফাইল - সব routes এবং middleware এখানে connect হয়েছে
 // ===================================================================
@@ -85,8 +85,8 @@ app.use(async (req: Request, res: Response, next) => {
 const allowedOrigins = [
   config.frontend_url,
   'http://localhost:3000',
-  'https://Extrain Web.vercel.app',
-  'https://ejobs-it.vercel.app',
+  'https://extrainweb.vercel.app',
+  'https://extrain-web-client.vercel.app',
 ].filter(Boolean);
 
 app.use(

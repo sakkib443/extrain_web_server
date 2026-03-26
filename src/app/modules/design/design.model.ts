@@ -35,7 +35,7 @@ const heroContentSchema = new Schema({
             type: String,
             default: 'সবচেয়ে নির্ভরযোগ্য লার্নিং প্ল্যাটফর্ম'
         },
-        brandName: { type: String, default: 'ejobs it' }
+        brandName: { type: String, default: 'Extrain Web' }
     },
     features: [{
         text: { type: String },

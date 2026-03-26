@@ -23,7 +23,7 @@ const seedAdmin = async () => {
         const usersCollection = db.collection('users');
 
         // Delete existing admin first (to recreate with fresh password)
-        await usersCollection.deleteOne({ email: 'admin@motionboss.com' });
+        await usersCollection.deleteOne({ email: 'admin@extrainweb.com' });
         console.log('Removed old admin user (if existed)');
 
         // Hash password with same salt rounds as in config (12)
@@ -31,7 +31,7 @@ const seedAdmin = async () => {
 
         // Create admin user with correct fields
         const adminUser = {
-            email: 'admin@motionboss.com',
+            email: 'admin@extrainweb.com',
             password: hashedPassword,
             firstName: 'Super',
             lastName: 'Admin',
@@ -73,7 +73,7 @@ const seedAdmin = async () => {
         console.log('');
         console.log('✅ Admin user created successfully!');
         console.log('');
-        console.log('📧 Email: admin@motionboss.com');
+        console.log('📧 Email: admin@extrainweb.com');
         console.log('🔑 Password: Admin@123');
         console.log('');
 
