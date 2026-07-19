@@ -43,7 +43,7 @@ const seedBlogs = async () => {
                 slug: 'technology',
                 description: 'Technology related articles',
                 descriptionBn: 'প্রযুক্তি সম্পর্কিত আর্টিকেল',
-                type: 'course',
+                type: 'website',
                 isActive: true,
                 order: 1,
                 createdAt: new Date(),

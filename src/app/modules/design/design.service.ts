@@ -18,19 +18,19 @@ const getDesignBySection = async (section: string): Promise<IDesign | null> => {
             section: 'hero',
             heroContent: {
                 badge: {
-                    text: 'Premium Learning Platform',
-                    textBn: 'প্রিমিয়াম লার্নিং প্ল্যাটফর্ম',
+                    text: 'Premium Digital Marketplace',
+                    textBn: 'প্রিমিয়াম ডিজিটাল মার্কেটপ্লেস',
                     showNew: true
                 },
                 heading: {
                     line1: 'Discover Premium',
                     line1Bn: 'আবিষ্কার করুন প্রিমিয়াম'
                 },
-                dynamicTexts: ['Professional Courses', 'Software Tools', 'Web Development'],
-                dynamicTextsBn: ['প্রফেশনাল কোর্স', 'সফটওয়্যার টুলস', 'ওয়েব ডেভেলপমেন্ট'],
+                dynamicTexts: ['Professional Websites', 'Software Tools', 'Web Development'],
+                dynamicTextsBn: ['প্রফেশনাল ওয়েবসাইট', 'সফটওয়্যার টুলস', 'ওয়েব ডেভেলপমেন্ট'],
                 description: {
-                    text: 'Access thousands of premium courses, software, and digital products. Built by experts, ready for you to launch in minutes.',
-                    textBn: 'হাজার হাজার প্রিমিয়াম কোর্স, সফটওয়্যার এবং ডিজিটাল প্রোডাক্ট অ্যাক্সেস করুন। বিশেষজ্ঞদের দ্বারা তৈরি।',
+                    text: 'Access thousands of premium websites, software, and digital products. Built by experts, ready for you to launch in minutes.',
+                    textBn: 'হাজার হাজার প্রিমিয়াম ওয়েবসাইট, সফটওয়্যার এবং ডিজিটাল প্রোডাক্ট অ্যাক্সেস করুন। বিশেষজ্ঞদের দ্বারা তৈরি।',
                     brandName: 'Extrain Web'
                 },
                 features: [
@@ -40,14 +40,14 @@ const getDesignBySection = async (section: string): Promise<IDesign | null> => {
                     { text: 'Money Back Guarantee', textBn: 'মানি ব্যাক গ্যারান্টি' }
                 ],
                 searchPlaceholder: {
-                    text: 'Search courses, software, themes...',
-                    textBn: 'কোর্স, সফটওয়্যার, থিম খুঁজুন...'
+                    text: 'Search websites, software, themes...',
+                    textBn: 'ওয়েবসাইট, সফটওয়্যার, থিম খুঁজুন...'
                 },
                 stats: {
                     activeUsers: 5000,
                     downloads: 12000,
                     avgRating: 4.8,
-                    totalCourses: 500
+                    totalProducts: 500
                 }
             },
             isActive: true
@@ -93,38 +93,6 @@ const getDesignBySection = async (section: string): Promise<IDesign | null> => {
                     buttonTextBn: 'হোয়াটসঅ্যাপে চ্যাট করুন'
                 },
                 mapEmbedUrl: 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3651.8986834879085!2d90.41723!3d23.7656976!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3755c754583dd209%3A0xdd0c5fcc7d2d3836!2sDaisy%20Garden!5e0!3m2!1sen!2sbd!4v1704532086149!5m2!1sen!2sbd'
-            },
-            isActive: true
-        });
-    }
-
-    // If popularCourse section doesn't exist, create default
-    if (!design && section === 'popularCourse') {
-        design = await Design.create({
-            section: 'popularCourse',
-            popularCourseContent: {
-                badge: {
-                    text: 'Popular Courses',
-                    textBn: 'জনপ্রিয় কোর্স'
-                },
-                heading: {
-                    text1: 'Explore Our ',
-                    text1Bn: 'আমাদের ',
-                    highlight: 'Top Courses',
-                    highlightBn: 'সেরা কোর্স',
-                    text2: '',
-                    text2Bn: ' সমূহ'
-                },
-                description: {
-                    text: 'Premium courses crafted by industry experts.',
-                    textBn: 'বিশেষজ্ঞ মেন্টরদের দ্বারা তৈরি প্রিমিয়াম কোর্স।'
-                },
-                cta: {
-                    buttonText: 'View All Courses',
-                    buttonTextBn: 'সব কোর্স দেখুন',
-                    footerText: 'Thousands of learners joined',
-                    footerTextBn: 'হাজার হাজার শিক্ষার্থী যোগ দিয়েছেন'
-                }
             },
             isActive: true
         });

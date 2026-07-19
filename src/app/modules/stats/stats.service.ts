@@ -39,16 +39,14 @@ const getDashboardStats = async () => {
 
         return {
             activeUsers: totalUsers,
-            downloads: 0, // Enrollment module removed
+            downloads: 0,
             avgRating: Math.round(avgRating * 10) / 10, // Round to 1 decimal
             totalProducts: totalProducts,
             // Extra details - use all counts to show actual data
             breakdown: {
-                courses: 0, // Course module removed
                 websites: allWebsites || totalWebsites,
                 software: allSoftware || totalSoftware,
                 users: totalUsers,
-                enrollments: 0, // Enrollment module removed
                 reviews: totalReviews
             }
         };
@@ -61,11 +59,9 @@ const getDashboardStats = async () => {
             avgRating: 4.8,
             totalProducts: 0,
             breakdown: {
-                courses: 0,
                 websites: 0,
                 software: 0,
                 users: 0,
-                enrollments: 0,
                 reviews: 0
             }
         };

@@ -37,7 +37,7 @@ export interface ICoupon {
     usedCount: number;               // How many times used
 
     // Applicable Products
-    applicableTo: 'all' | 'course' | 'website' | 'software';
+    applicableTo: 'all' | 'website' | 'software';
     specificProducts?: Types.ObjectId[];  // Specific product IDs
 
     // Status

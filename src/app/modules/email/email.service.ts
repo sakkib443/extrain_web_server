@@ -245,7 +245,103 @@ const getPasswordResetEmailTemplate = (firstName: string, resetLink: string) => 
 // EMAIL SERVICE
 // ===================================================================
 
+// Money receipt / order confirmation template — admin এর checkbox অনুযায়ী section আসে
+const rcptBdt = (n: number) => 'Tk ' + Number(n || 0).toLocaleString('en-US');
+const rcptDate = (d: any) =>
+    d ? new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+
+const getMoneyReceiptTemplate = (data: any) => {
+    const { receiptNo, project: p, options: o = {}, message } = data;
+    const pkg = p.packageType === 'with_domain_hosting' ? 'With Domain & Hosting' : 'Without Domain & Hosting';
+    const row = (label: string, val: string, color?: string) =>
+        `<tr><td style="padding:7px 0;color:#64748b;font-size:14px;">${label}</td><td style="padding:7px 0;text-align:right;font-weight:600;font-size:14px;${color ? `color:${color};` : ''}">${val}</td></tr>`;
+
+    let installmentBlock = '';
+    if (o.installments && Array.isArray(p.installments) && p.installments.length) {
+        const rows = p.installments
+            .map(
+                (i: any, idx: number) => `
+            <tr style="border-bottom:1px solid #f1f5f9;">
+                <td style="padding:8px;font-size:13px;">${i.no || idx + 1}</td>
+                <td style="padding:8px;font-size:13px;">${i.note || '—'}</td>
+                <td style="padding:8px;font-size:13px;">${rcptDate(i.date)}</td>
+                <td style="padding:8px;font-size:13px;text-align:center;">${i.paid === false ? '⏳ Due' : '✅ Paid'}</td>
+                <td style="padding:8px;font-size:13px;text-align:right;font-weight:600;">${rcptBdt(i.amount)}</td>
+            </tr>`
+            )
+            .join('');
+        installmentBlock = `
+        <h3 style="color:#1e293b;font-size:15px;margin:22px 0 8px;">Payment Installments</h3>
+        <table style="width:100%;border-collapse:collapse;">
+            <thead><tr style="background:#f1f5f9;">
+                <th style="padding:8px;text-align:left;font-size:12px;">#</th>
+                <th style="padding:8px;text-align:left;font-size:12px;">Note</th>
+                <th style="padding:8px;text-align:left;font-size:12px;">Date</th>
+                <th style="padding:8px;text-align:center;font-size:12px;">Status</th>
+                <th style="padding:8px;text-align:right;font-size:12px;">Amount</th>
+            </tr></thead>
+            <tbody>${rows}</tbody>
+        </table>`;
+    }
+
+    return getEmailWrapper(`
+        <div style="text-align:center;margin-bottom:24px;">
+            ${o.paymentConfirmation
+            ? `<div style="display:inline-block;background:#dcfce7;color:#16a34a;padding:6px 16px;border-radius:999px;font-size:13px;font-weight:700;margin-bottom:10px;">✅ Payment Confirmed</div>`
+            : ''}
+            <h2 style="color:#1e293b;font-size:22px;margin:6px 0;">Money Receipt</h2>
+            <p style="color:#94a3b8;font-size:13px;">Receipt #${receiptNo} • ${rcptDate(new Date())}</p>
+        </div>
+
+        ${message ? `<p style="color:#334155;font-size:15px;line-height:1.6;background:#fff7ed;border-radius:10px;padding:14px;margin-bottom:20px;">${message}</p>` : ''}
+
+        <table style="width:100%;">
+            ${row('Client', p.clientName || '—')}
+            ${p.companyBrand ? row('Company', p.companyBrand) : ''}
+            ${row('Phone', p.phone || '—')}
+            ${row('Project', `${p.websiteType || ''} (${pkg})`)}
+        </table>
+
+        <div style="background:#fff7ed;border-radius:12px;padding:16px;margin:18px 0;">
+            <table style="width:100%;">
+                ${row('Total Project Amount', rcptBdt(p.totalProjectAmount))}
+                ${o.paymentConfirmation ? row('Total Paid', rcptBdt(p.totalPaid), '#16a34a') : ''}
+                ${o.due !== false ? row('Due', rcptBdt(p.totalDue), '#d97706') : ''}
+            </table>
+        </div>
+
+        ${installmentBlock}
+
+        <table style="width:100%;margin-top:16px;">
+            ${o.delivery && p.projectDeliveryDate ? row('Delivery Date', rcptDate(p.projectDeliveryDate)) : ''}
+            ${o.due !== false && p.nextPayDate && p.totalDue > 0 ? row('Next Payment Date', rcptDate(p.nextPayDate)) : ''}
+        </table>
+
+        ${o.contact
+            ? `<p style="color:#64748b;font-size:13px;text-align:center;margin-top:24px;">যেকোনো প্রয়োজনে যোগাযোগ করুন: <a href="tel:+8801711946614" style="color:#FD9A00;">+880 1711-946614</a></p>`
+            : ''}
+        <p style="color:#94a3b8;font-size:12px;text-align:center;margin-top:18px;">ধন্যবাদ আমাদের সাথে থাকার জন্য • Extrain Web Team</p>
+    `);
+};
+
 const EmailService = {
+    // Send money receipt / order confirmation
+    async sendMoneyReceiptEmail(email: string, data: any): Promise<boolean> {
+        try {
+            await transporter.sendMail({
+                from: `"Extrain Web" <${config.email.from}>`,
+                to: email,
+                subject: `🧾 Money Receipt ${data.receiptNo} - Extrain Web`,
+                html: getMoneyReceiptTemplate(data),
+            });
+            console.log(`✅ Receipt email sent to ${email}`);
+            return true;
+        } catch (error) {
+            console.error('❌ Failed to send receipt email:', error);
+            return false;
+        }
+    },
+
     // Send welcome email on signup
     async sendWelcomeEmail(email: string, firstName: string): Promise<boolean> {
         try {

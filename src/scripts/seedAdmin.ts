@@ -59,11 +59,6 @@ const seedAdmin = async () => {
             isDeleted: false,
             totalPurchases: 0,
             totalSpent: 0,
-            totalCoursesEnrolled: 0,
-            totalCoursesCompleted: 0,
-            enrolledCourses: [],
-            completedCourses: [],
-            certificates: [],
             createdAt: new Date(),
             updatedAt: new Date(),
         };

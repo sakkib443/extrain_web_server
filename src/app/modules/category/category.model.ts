@@ -49,8 +49,8 @@ const categorySchema = new Schema<ICategory>(
         },
         type: {
             type: String,
-            enum: ['course', 'website', 'software'],
-            default: 'course',
+            enum: ['website', 'software'],
+            default: 'website',
         },
         productCount: {
             type: Number,

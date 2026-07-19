@@ -6,14 +6,12 @@ import sendResponse from '../../utils/sendResponse';
 
 // ============ INTERFACE ============
 export interface INotification extends Document {
-    type: 'order' | 'enrollment' | 'review' | 'user' | 'course' | 'system' | 'like' | 'blog';
+    type: 'order' | 'review' | 'user' | 'system' | 'like' | 'blog';
     title: string;
     message: string;
     data?: {
         orderId?: Types.ObjectId;
         userId?: Types.ObjectId;
-        courseId?: Types.ObjectId;
-        enrollmentId?: Types.ObjectId;
         reviewId?: Types.ObjectId;
         blogId?: Types.ObjectId;
         amount?: number;
@@ -31,7 +29,7 @@ const NotificationSchema = new Schema<INotification>(
     {
         type: {
             type: String,
-            enum: ['order', 'enrollment', 'review', 'user', 'course', 'system', 'like', 'blog'],
+            enum: ['order', 'review', 'user', 'system', 'like', 'blog'],
             required: true,
         },
         title: {
@@ -46,8 +44,6 @@ const NotificationSchema = new Schema<INotification>(
         data: {
             orderId: { type: Schema.Types.ObjectId, ref: 'Order' },
             userId: { type: Schema.Types.ObjectId, ref: 'User' },
-            courseId: { type: Schema.Types.ObjectId, ref: 'Course' },
-            enrollmentId: { type: Schema.Types.ObjectId, ref: 'Enrollment' },
             reviewId: { type: Schema.Types.ObjectId, ref: 'Review' },
             amount: Number,
             link: String,
@@ -152,28 +148,6 @@ export const NotificationService = {
         });
     },
 
-    // Create enrollment notification
-    async createEnrollmentNotification(enrollData: {
-        enrollmentId: Types.ObjectId;
-        userId: Types.ObjectId;
-        userName: string;
-        courseId: Types.ObjectId;
-        courseName: string;
-    }): Promise<INotification> {
-        return this.createNotification({
-            type: 'enrollment',
-            title: 'New Course Enrollment! 🎓',
-            message: `${enrollData.userName} enrolled in "${enrollData.courseName}"`,
-            data: {
-                enrollmentId: enrollData.enrollmentId,
-                userId: enrollData.userId,
-                courseId: enrollData.courseId,
-                link: `/dashboard/admin/enrollment`,
-            },
-            forAdmin: true,
-        });
-    },
-
     // Create user registration notification
     async createUserNotification(userData: {
         userId: Types.ObjectId;
@@ -219,7 +193,7 @@ export const NotificationService = {
         userName: string;
         productId: Types.ObjectId;
         productName: string;
-        productType: 'website' | 'software' | 'course';
+        productType: 'website' | 'software';
     }): Promise<INotification> {
         return this.createNotification({
             type: 'like',

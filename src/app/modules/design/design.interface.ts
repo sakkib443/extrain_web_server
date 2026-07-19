@@ -46,35 +46,6 @@ export interface IHeroContent {
 }
 
 /**
- * IPopularCourseContent - Popular Course Section Content
- * জনপ্রিয় কোর্স সেকশনের কন্টেন্ট
- */
-export interface IPopularCourseContent {
-    badge: {
-        text: string;
-        textBn: string;
-    };
-    heading: {
-        text1: string;
-        text1Bn: string;
-        highlight: string;
-        highlightBn: string;
-        text2: string;
-        text2Bn: string;
-    };
-    description: {
-        text: string;
-        textBn: string;
-    };
-    cta: {
-        buttonText: string;
-        buttonTextBn: string;
-        footerText: string;
-        footerTextBn: string;
-    };
-}
-
-/**
  * IDigitalProductsContent - Digital Products Section Content
  * ডিজিটাল প্রোডাক্ট সেকশনের কন্টেন্ট
  */
@@ -186,13 +157,10 @@ export interface IDesign {
     _id?: Types.ObjectId;
 
     // Section identifier
-    section: 'hero' | 'about' | 'footer' | 'topHeader' | 'navbar' | 'contact' | 'popularCourse' | 'digitalProducts' | 'whatWeProvide' | 'aboutHero' | 'aboutMission' | 'aboutStats' | 'aboutFeatures' | 'aboutFounder' | 'aboutGlobal' | 'aboutCTA';
+    section: 'hero' | 'about' | 'footer' | 'topHeader' | 'navbar' | 'contact' | 'digitalProducts' | 'whatWeProvide' | 'aboutHero' | 'aboutMission' | 'aboutStats' | 'aboutFeatures' | 'aboutFounder' | 'aboutGlobal' | 'aboutCTA';
 
     // Hero section content
     heroContent?: IHeroContent;
-
-    // Popular Course section content
-    popularCourseContent?: IPopularCourseContent;
 
     // Digital Products section content
     digitalProductsContent?: IDigitalProductsContent;

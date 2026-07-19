@@ -20,7 +20,7 @@ import { NotificationService } from '../notification/notification.module';
 // ==================== INTERFACE ====================
 export interface IOrderItem {
     product: Types.ObjectId;
-    productType: 'website' | 'software' | 'course';
+    productType: 'website' | 'software';
     title: string;
     price: number;
     image?: string;
@@ -76,7 +76,7 @@ const orderSchema = new Schema<IOrder>(
         items: [
             {
                 product: { type: Schema.Types.ObjectId, required: true },
-                productType: { type: String, enum: ['website', 'software', 'course'], required: true },
+                productType: { type: String, enum: ['website', 'software'], required: true },
                 title: { type: String, required: true },
                 price: { type: Number, required: true },
                 image: { type: String },
@@ -137,7 +137,7 @@ export const createOrderValidation = z.object({
         items: z.array(
             z.object({
                 productId: z.string(),
-                productType: z.enum(['website', 'software', 'course']),
+                productType: z.enum(['website', 'software']),
                 title: z.string(),
                 price: z.number(),
                 image: z.string().optional(),
@@ -190,10 +190,7 @@ const deliverOrderItems = async (order: any, rawItems?: any[]): Promise<void> =>
         try {
             const productId = item.product || item.productId;
 
-            if (item.productType === 'course') {
-                // Course module removed - skip course delivery
-                console.log('Skipping course delivery - module removed');
-            } else if (item.productType === 'website') {
+            if (item.productType === 'website') {
                 const { Website } = await import('../website/website.model');
                 await Website.findByIdAndUpdate(productId, { $inc: { salesCount: 1 } });
                 await DownloadService.createDownloadRecord(userId, order._id!.toString(), productId.toString(), item.productType, item.title);

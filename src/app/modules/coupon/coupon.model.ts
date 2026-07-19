@@ -83,7 +83,7 @@ const couponSchema = new Schema<ICoupon, CouponModel>(
         },
         applicableTo: {
             type: String,
-            enum: ['all', 'course', 'website', 'software'],
+            enum: ['all', 'website', 'software'],
             default: 'all'
         },
         specificProducts: [{

@@ -144,28 +144,6 @@ const userSchema = new Schema<IUser, UserModel, IUserMethods>(
       type: Number,
       default: 0,
     },
-    totalCoursesEnrolled: {
-      type: Number,
-      default: 0,
-    },
-    totalCoursesCompleted: {
-      type: Number,
-      default: 0,
-    },
-
-    // ==================== LMS Specific ====================
-    enrolledCourses: [{
-      type: Schema.Types.ObjectId,
-      ref: 'Course',
-    }],
-    completedCourses: [{
-      type: Schema.Types.ObjectId,
-      ref: 'Course',
-    }],
-    certificates: [{
-      type: Schema.Types.ObjectId,
-      ref: 'Certificate',
-    }],
 
     // ==================== Password Reset ====================
     passwordResetToken: String,

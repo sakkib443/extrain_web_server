@@ -116,12 +116,12 @@ export const PAGE_DEFINITIONS: IPageDefinition[] = [
                     { key: 'heading.line1Bn', label: 'Main Heading (Bengali)', type: 'text', placeholder: 'আবিষ্কার করুন প্রিমিয়াম' },
                     { key: 'heading.line2', label: 'Text Before Typing', type: 'text', placeholder: 'Learn' },
                     { key: 'heading.line2Bn', label: 'Text Before Typing (Bengali)', type: 'text', placeholder: 'শিখুন' },
-                    { key: 'dynamicTexts', label: 'Typing Animation Texts', type: 'array', placeholder: 'Professional Courses, Software Tools' },
+                    { key: 'dynamicTexts', label: 'Typing Animation Texts', type: 'array', placeholder: 'Professional Websites, Software Tools' },
                     { key: 'dynamicTextsBn', label: 'Typing Animation Texts (Bengali)', type: 'array', placeholder: 'প্রফেশনাল কোর্স, সফটওয়্যার টুলস' },
-                    { key: 'description.text', label: 'Description', type: 'textarea', placeholder: 'Access thousands of premium courses...' },
+                    { key: 'description.text', label: 'Description', type: 'textarea', placeholder: 'Access thousands of premium websites...' },
                     { key: 'description.textBn', label: 'Description (Bengali)', type: 'textarea', placeholder: 'হাজার হাজার প্রিমিয়াম কোর্স...' },
                     { key: 'description.brandName', label: 'Brand Name (Highlighted)', type: 'text', placeholder: 'Extrain Web' },
-                    { key: 'searchPlaceholder.text', label: 'Search Placeholder', type: 'text', placeholder: 'Search courses, software...' },
+                    { key: 'searchPlaceholder.text', label: 'Search Placeholder', type: 'text', placeholder: 'Search websites, software...' },
                     { key: 'searchPlaceholder.textBn', label: 'Search Placeholder (Bengali)', type: 'text', placeholder: 'কোর্স, সফটওয়্যার খুঁজুন...' },
                     { key: 'stats.activeUsers', label: 'Active Users Count', type: 'number', defaultValue: 5000 },
                     { key: 'stats.downloads', label: 'Downloads Count', type: 'number', defaultValue: 12000 },
@@ -141,23 +141,6 @@ export const PAGE_DEFINITIONS: IPageDefinition[] = [
                     { key: 'subtitle', label: 'Subtitle', type: 'text', placeholder: 'Explore our top categories' },
                     { key: 'subtitleBn', label: 'Subtitle (Bengali)', type: 'text', placeholder: 'আমাদের শীর্ষ ক্যাটাগরি দেখুন' },
                     { key: 'showCount', label: 'Number of Categories to Show', type: 'number', defaultValue: 8 },
-                ]
-            },
-            {
-                sectionKey: 'popularCourses',
-                sectionName: 'Popular Courses',
-                sectionNameBn: 'জনপ্রিয় কোর্স',
-                icon: 'FiBook',
-                description: 'Featured courses carousel',
-                fields: [
-                    { key: 'heading', label: 'Section Heading', type: 'text', placeholder: 'Popular Courses' },
-                    { key: 'headingBn', label: 'Section Heading (Bengali)', type: 'text', placeholder: 'জনপ্রিয় কোর্স' },
-                    { key: 'subtitle', label: 'Subtitle', type: 'text', placeholder: 'Learn from industry experts' },
-                    { key: 'subtitleBn', label: 'Subtitle (Bengali)', type: 'text', placeholder: 'ইন্ডাস্ট্রি এক্সপার্টদের কাছ থেকে শিখুন' },
-                    { key: 'showCount', label: 'Number of Courses to Show', type: 'number', defaultValue: 6 },
-                    { key: 'viewAllLink', label: 'View All Link', type: 'link', placeholder: '/courses' },
-                    { key: 'viewAllText', label: 'View All Button Text', type: 'text', placeholder: 'View All Courses' },
-                    { key: 'viewAllTextBn', label: 'View All Button Text (Bengali)', type: 'text', placeholder: 'সব কোর্স দেখুন' },
                 ]
             },
             {
@@ -256,15 +239,15 @@ export const PAGE_DEFINITIONS: IPageDefinition[] = [
                 sectionNameBn: 'পরিসংখ্যান',
                 icon: 'FiBarChart',
                 fields: [
-                    { key: 'students', label: 'Total Students', type: 'number', defaultValue: 10000 },
-                    { key: 'studentsLabel', label: 'Students Label', type: 'text', placeholder: 'Happy Students' },
-                    { key: 'studentsLabelBn', label: 'Students Label (Bengali)', type: 'text', placeholder: 'সন্তুষ্ট শিক্ষার্থী' },
-                    { key: 'courses', label: 'Total Courses', type: 'number', defaultValue: 100 },
-                    { key: 'coursesLabel', label: 'Courses Label', type: 'text', placeholder: 'Expert Courses' },
-                    { key: 'coursesLabelBn', label: 'Courses Label (Bengali)', type: 'text', placeholder: 'এক্সপার্ট কোর্স' },
-                    { key: 'instructors', label: 'Total Instructors', type: 'number', defaultValue: 50 },
-                    { key: 'instructorsLabel', label: 'Instructors Label', type: 'text', placeholder: 'Expert Mentors' },
-                    { key: 'instructorsLabelBn', label: 'Instructors Label (Bengali)', type: 'text', placeholder: 'এক্সপার্ট মেন্টর' },
+                    { key: 'customers', label: 'Total Customers', type: 'number', defaultValue: 10000 },
+                    { key: 'customersLabel', label: 'Customers Label', type: 'text', placeholder: 'Happy Customers' },
+                    { key: 'customersLabelBn', label: 'Customers Label (Bengali)', type: 'text', placeholder: 'সন্তুষ্ট গ্রাহক' },
+                    { key: 'products', label: 'Total Products', type: 'number', defaultValue: 100 },
+                    { key: 'productsLabel', label: 'Products Label', type: 'text', placeholder: 'Digital Products' },
+                    { key: 'productsLabelBn', label: 'Products Label (Bengali)', type: 'text', placeholder: 'ডিজিটাল প্রোডাক্ট' },
+                    { key: 'projects', label: 'Total Projects', type: 'number', defaultValue: 50 },
+                    { key: 'projectsLabel', label: 'Projects Label', type: 'text', placeholder: 'Projects Delivered' },
+                    { key: 'projectsLabelBn', label: 'Projects Label (Bengali)', type: 'text', placeholder: 'সম্পন্ন প্রজেক্ট' },
                     { key: 'countries', label: 'Countries Served', type: 'number', defaultValue: 20 },
                     { key: 'countriesLabel', label: 'Countries Label', type: 'text', placeholder: 'Countries Reached' },
                     { key: 'countriesLabelBn', label: 'Countries Label (Bengali)', type: 'text', placeholder: 'দেশে পৌঁছেছি' },
@@ -298,46 +281,7 @@ export const PAGE_DEFINITIONS: IPageDefinition[] = [
                     { key: 'subtitleBn', label: 'CTA Subtitle (Bengali)', type: 'text', placeholder: 'হাজার হাজার সফল শিক্ষার্থীদের সাথে যোগ দিন' },
                     { key: 'buttonText', label: 'Button Text', type: 'text', placeholder: 'Get Started' },
                     { key: 'buttonTextBn', label: 'Button Text (Bengali)', type: 'text', placeholder: 'শুরু করুন' },
-                    { key: 'buttonLink', label: 'Button Link', type: 'link', placeholder: '/courses' },
-                ]
-            },
-        ]
-    },
-
-    // ========================
-    // TRAINING PAGE
-    // ========================
-    {
-        pageKey: 'training',
-        pageName: 'Training Page',
-        pageNameBn: 'ট্রেনিং পেজ',
-        icon: 'FiBook',
-        route: '/courses',
-        sections: [
-            {
-                sectionKey: 'hero',
-                sectionName: 'Hero Section',
-                sectionNameBn: 'হিরো সেকশন',
-                icon: 'FiStar',
-                fields: [
-                    { key: 'badge', label: 'Badge Text', type: 'text', placeholder: 'Our Courses' },
-                    { key: 'badgeBn', label: 'Badge Text (Bengali)', type: 'text', placeholder: 'আমাদের কোর্স' },
-                    { key: 'title', label: 'Page Title', type: 'text', placeholder: 'Explore Our Courses' },
-                    { key: 'titleBn', label: 'Page Title (Bengali)', type: 'text', placeholder: 'আমাদের কোর্স এক্সপ্লোর করুন' },
-                    { key: 'subtitle', label: 'Subtitle', type: 'textarea', placeholder: 'Learn skills that matter...' },
-                    { key: 'subtitleBn', label: 'Subtitle (Bengali)', type: 'textarea', placeholder: 'গুরুত্বপূর্ণ দক্ষতা শিখুন...' },
-                ]
-            },
-            {
-                sectionKey: 'filters',
-                sectionName: 'Filter Labels',
-                sectionNameBn: 'ফিল্টার লেবেল',
-                icon: 'FiFilter',
-                fields: [
-                    { key: 'allCategories', label: 'All Categories Label', type: 'text', placeholder: 'All Categories' },
-                    { key: 'allCategoriesBn', label: 'All Categories Label (Bengali)', type: 'text', placeholder: 'সব ক্যাটাগরি' },
-                    { key: 'searchPlaceholder', label: 'Search Placeholder', type: 'text', placeholder: 'Search courses...' },
-                    { key: 'searchPlaceholderBn', label: 'Search Placeholder (Bengali)', type: 'text', placeholder: 'কোর্স খুঁজুন...' },
+                    { key: 'buttonLink', label: 'Button Link', type: 'link', placeholder: '/website' },
                 ]
             },
         ]
@@ -388,7 +332,7 @@ export const PAGE_DEFINITIONS: IPageDefinition[] = [
                 fields: [
                     { key: 'badge', label: 'Badge Text', type: 'text', placeholder: 'Success Stories' },
                     { key: 'badgeBn', label: 'Badge Text (Bengali)', type: 'text', placeholder: 'সাফল্যের গল্প' },
-                    { key: 'title', label: 'Page Title', type: 'text', placeholder: 'Student Success Stories' },
+                    { key: 'title', label: 'Page Title', type: 'text', placeholder: 'Customer Success Stories' },
                     { key: 'titleBn', label: 'Page Title (Bengali)', type: 'text', placeholder: 'শিক্ষার্থীদের সাফল্যের গল্প' },
                     { key: 'subtitle', label: 'Subtitle', type: 'textarea', placeholder: 'Real stories from our community...' },
                     { key: 'subtitleBn', label: 'Subtitle (Bengali)', type: 'textarea', placeholder: 'আমাদের কমিউনিটির বাস্তব গল্প...' },

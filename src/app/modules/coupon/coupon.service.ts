@@ -88,7 +88,7 @@ const deleteCoupon = async (id: string): Promise<ICoupon | null> => {
 const applyCoupon = async (
     code: string,
     cartTotal: number,
-    productType?: 'all' | 'course' | 'website' | 'software',
+    productType?: 'all' | 'website' | 'software',
     userId?: string
 ): Promise<{
     valid: boolean;

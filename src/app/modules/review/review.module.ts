@@ -18,7 +18,7 @@ export interface IReview {
     _id?: Types.ObjectId;
     user: Types.ObjectId;
     product: Types.ObjectId;
-    productType: 'website' | 'software' | 'course';
+    productType: 'website' | 'software';
     rating: number;
     title?: string;
     comment: string;
@@ -34,7 +34,7 @@ const reviewSchema = new Schema<IReview>(
     {
         user: { type: Schema.Types.ObjectId, ref: 'User', required: true },
         product: { type: Schema.Types.ObjectId, required: true },
-        productType: { type: String, enum: ['website', 'software', 'course'], required: true },
+        productType: { type: String, enum: ['website', 'software'], required: true },
         rating: { type: Number, required: true, min: 1, max: 5 },
         title: { type: String, maxlength: 100 },
         comment: { type: String, required: true, maxlength: 1000 },
@@ -58,8 +58,8 @@ export const Review = model<IReview>('Review', reviewSchema);
 export const ReviewValidationSchema = z.object({
     body: z.object({
         productId: z.string({ required_error: 'Product ID is required' }),
-        productType: z.enum(['website', 'software', 'course'], {
-            errorMap: (issue, ctx) => ({ message: "Product type must be either website, software, or course" })
+        productType: z.enum(['website', 'software'], {
+            errorMap: (issue, ctx) => ({ message: "Product type must be either website or software" })
         }),
         rating: z.number().min(1).max(5),
         title: z.string().max(100).optional(),
@@ -79,18 +79,13 @@ const ReviewService = {
         let isVerifiedPurchase = false;
 
         // Check if user has purchased the product
-        if (data.productType === 'course') {
-            // Enrollment module removed - courses no longer sold
-            isVerifiedPurchase = false;
-        } else {
-            const { Order } = await import('../order/order.module');
-            const order = await Order.findOne({
-                user: userId,
-                paymentStatus: 'completed',
-                'items.product': data.product
-            });
-            if (order) isVerifiedPurchase = true;
-        }
+        const { Order } = await import('../order/order.module');
+        const order = await Order.findOne({
+            user: userId,
+            paymentStatus: 'completed',
+            'items.product': data.product
+        });
+        if (order) isVerifiedPurchase = true;
 
         const review = await Review.create({
             ...data,
@@ -139,9 +134,6 @@ const ReviewService = {
                 } else if (review.productType === 'software') {
                     const { Software } = await import('../software/software.model');
                     productDetails = await Software.findById(review.product).select('title slug thumbnail images');
-                } else if (review.productType === 'course') {
-                    // Course module removed - skip course product details
-                    productDetails = null;
                 }
             } catch (err) {
                 console.error(`Failed to fetch product for review ${review._id}`, err);
@@ -176,9 +168,6 @@ const ReviewService = {
                 } else if (review.productType === 'software') {
                     const { Software } = await import('../software/software.model');
                     productDetails = await Software.findById(review.product).select('title slug');
-                } else if (review.productType === 'course') {
-                    // Course module removed - skip course product details
-                    productDetails = null;
                 }
             } catch (err) {
                 console.error(`Failed to fetch product for review ${review._id}`, err);
@@ -216,10 +205,7 @@ const ReviewService = {
         const avgRating = stats[0]?.avgRating ? Math.round(stats[0].avgRating * 10) / 10 : 0;
         const count = stats[0]?.count || 0;
 
-        if (productType === 'course') {
-            // Course module removed - skip course stat sync
-            console.log('Skipping course stats sync - module removed');
-        } else if (productType === 'website') {
+        if (productType === 'website') {
             const { Website } = await import('../website/website.model');
             await Website.findByIdAndUpdate(productId, { rating: avgRating, reviewCount: count });
         } else if (productType === 'software') {

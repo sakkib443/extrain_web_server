@@ -22,17 +22,7 @@ const AnalyticsService = {
     async getDashboardSummary(): Promise<{
         // User Stats
         totalUsers: number;
-        totalStudents: number;
         newUsersThisMonth: number;
-        // Course Stats (now always 0 - modules removed)
-        totalCourses: number;
-        publishedCourses: number;
-        totalLessons: number;
-        // Enrollment Stats (now always 0 - modules removed)
-        totalEnrollments: number;
-        activeEnrollments: number;
-        completedEnrollments: number;
-        enrollmentsThisMonth: number;
         // Product Stats
         totalWebsites: number;
         totalSoftware: number;
@@ -60,7 +50,6 @@ const AnalyticsService = {
         const [
             // User counts
             totalUsers,
-            totalStudents,
             newUsersThisMonth,
             // Product counts
             totalWebsites,
@@ -82,7 +71,6 @@ const AnalyticsService = {
         ] = await Promise.all([
             // User queries
             User.countDocuments({ isDeleted: false }),
-            User.countDocuments({ role: 'student', isDeleted: false }),
             User.countDocuments({ createdAt: { $gte: firstDayOfMonth }, isDeleted: false }),
             // Product queries
             Website.countDocuments({ isDeleted: false }),
@@ -150,17 +138,7 @@ const AnalyticsService = {
         return {
             // User Stats
             totalUsers,
-            totalStudents,
             newUsersThisMonth,
-            // Course Stats (modules removed - returning 0)
-            totalCourses: 0,
-            publishedCourses: 0,
-            totalLessons: 0,
-            // Enrollment Stats (modules removed - returning 0)
-            totalEnrollments: 0,
-            activeEnrollments: 0,
-            completedEnrollments: 0,
-            enrollmentsThisMonth: 0,
             // Product Stats
             totalWebsites,
             totalSoftware,
@@ -289,7 +267,7 @@ const AnalyticsService = {
 
     /**
      * Category Revenue Breakdown - প্রোডাক্ট টাইপ অনুযায়ী রেভিনিউ (মাস ভিত্তিক)
-     * Returns monthly revenue for courses, websites, and software for the last 12 months
+     * Returns monthly revenue per product type (websites, software) for the last 12 months
      */
     async getCategoryRevenue(): Promise<{
         labels: string[];

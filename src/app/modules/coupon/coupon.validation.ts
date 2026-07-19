@@ -75,7 +75,7 @@ const createCouponZodSchema = z.object({
             const parsed = Number(val);
             return isNaN(parsed) ? 1 : parsed;
         }, z.number().min(1, 'Per user limit must be at least 1').optional()),
-        applicableTo: z.enum(['all', 'course', 'website', 'software']).optional(),
+        applicableTo: z.enum(['all', 'website', 'software']).optional(),
         specificProducts: z.array(z.string()).optional(),
         isActive: z.preprocess((val) => {
             if (val === 'true' || val === true) return true;
@@ -144,7 +144,7 @@ const updateCouponZodSchema = z.object({
             const parsed = Number(val);
             return isNaN(parsed) ? val : parsed;
         }, z.number().min(1, 'Per user limit must be at least 1').optional()),
-        applicableTo: z.enum(['all', 'course', 'website', 'software']).optional(),
+        applicableTo: z.enum(['all', 'website', 'software']).optional(),
         specificProducts: z.array(z.string()).optional(),
         isActive: z.preprocess((val) => {
             if (val === 'true' || val === true) return true;
@@ -176,7 +176,7 @@ const applyCouponZodSchema = z.object({
             required_error: 'Cart total is required',
             invalid_type_error: 'Cart total must be a number'
         }).min(0, 'Cart total must be 0 or greater')),
-        productType: z.enum(['all', 'course', 'website', 'software']).optional()
+        productType: z.enum(['all', 'website', 'software']).optional()
     })
 });
 

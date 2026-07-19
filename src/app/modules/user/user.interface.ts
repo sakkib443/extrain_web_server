@@ -9,7 +9,7 @@ import { Model, Types } from 'mongoose';
  * User Role Types
  * admin - System administrator with full access
  * mentor - Limited admin access (create/update only, no delete, no analytics)
- * student - Learner who enrolls in courses and purchases products
+ * student - Registered customer / regular user (default self-registration role)
  */
 export type TUserRole = 'admin' | 'mentor' | 'student';
 
@@ -61,16 +61,9 @@ export interface IUser {
   // Skills/expertise
   skills?: string[];
 
-  // LMS Specific Fields
-  enrolledCourses?: Types.ObjectId[];   // Courses enrolled
-  completedCourses?: Types.ObjectId[];  // Courses completed
-  certificates?: Types.ObjectId[];      // Earned certificates
-
   // Statistics - Auto updated
   totalPurchases: number;
   totalSpent: number;
-  totalCoursesEnrolled: number;         // Total courses enrolled
-  totalCoursesCompleted: number;        // Total courses completed
 
   // Password reset fields
   passwordResetToken?: string;

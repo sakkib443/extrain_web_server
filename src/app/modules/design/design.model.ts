@@ -20,20 +20,20 @@ const heroContentSchema = new Schema({
     },
     dynamicTexts: {
         type: [String],
-        default: ['PREMIUM COURSES', 'Professional Courses', 'Software Tools', 'Web Development']
+        default: ['PREMIUM TEMPLATES', 'Professional Websites', 'Software Tools', 'Web Development']
     },
     dynamicTextsBn: {
         type: [String],
-        default: ['প্রিমিয়াম কোর্স', 'প্রফেশনাল কোর্স', 'সফটওয়্যার টুলস', 'ওয়েব ডেভেলপমেন্ট']
+        default: ['প্রিমিয়াম টেমপ্লেট', 'প্রফেশনাল ওয়েবসাইট', 'সফটওয়্যার টুলস', 'ওয়েব ডেভেলপমেন্ট']
     },
     description: {
         text: {
             type: String,
-            default: 'The most powerful learning and creative platform by'
+            default: 'The most powerful digital products & creative platform by'
         },
         textBn: {
             type: String,
-            default: 'সবচেয়ে নির্ভরযোগ্য লার্নিং প্ল্যাটফর্ম'
+            default: 'সবচেয়ে নির্ভরযোগ্য ডিজিটাল প্রোডাক্ট প্ল্যাটফর্ম'
         },
         brandName: { type: String, default: 'Extrain Web' }
     },
@@ -42,40 +42,14 @@ const heroContentSchema = new Schema({
         textBn: { type: String }
     }],
     searchPlaceholder: {
-        text: { type: String, default: 'Search courses, software, themes...' },
-        textBn: { type: String, default: 'কোর্স, সফটওয়্যার, থিম খুঁজুন...' }
+        text: { type: String, default: 'Search websites, software, themes...' },
+        textBn: { type: String, default: 'ওয়েবসাইট, সফটওয়্যার, থিম খুঁজুন...' }
     },
     stats: {
         activeUsers: { type: Number, default: 5000 },
         downloads: { type: Number, default: 12000 },
         avgRating: { type: Number, default: 4.8 },
         totalProducts: { type: Number, default: 500 }
-    }
-}, { _id: false });
-
-// Popular Course Section Schema
-const popularCourseContentSchema = new Schema({
-    badge: {
-        text: { type: String, default: 'Popular Courses' },
-        textBn: { type: String, default: 'জনপ্রিয় কোর্স' }
-    },
-    heading: {
-        text1: { type: String, default: 'Explore Our ' },
-        text1Bn: { type: String, default: 'আমাদের ' },
-        highlight: { type: String, default: 'Top Courses' },
-        highlightBn: { type: String, default: 'সেরা কোর্স' },
-        text2: { type: String, default: '' },
-        text2Bn: { type: String, default: ' সমূহ' }
-    },
-    description: {
-        text: { type: String, default: 'Premium courses crafted by industry experts.' },
-        textBn: { type: String, default: 'বিশেষজ্ঞ মেন্টরদের দ্বারা তৈরি প্রিমিয়াম কোর্স।' }
-    },
-    cta: {
-        buttonText: { type: String, default: 'View All Courses' },
-        buttonTextBn: { type: String, default: 'সব কোর্স দেখুন' },
-        footerText: { type: String, default: 'Thousands of learners joined' },
-        footerTextBn: { type: String, default: 'হাজার হাজার শিক্ষার্থী যোগ দিয়েছেন' }
     }
 }, { _id: false });
 
@@ -181,11 +155,10 @@ const designSchema = new Schema<IDesign, DesignModel>(
         section: {
             type: String,
             required: true,
-            enum: ['hero', 'about', 'footer', 'topHeader', 'navbar', 'contact', 'popularCourse', 'digitalProducts', 'whatWeProvide', 'aboutHero', 'aboutMission', 'aboutStats', 'aboutFeatures', 'aboutFounder', 'aboutGlobal', 'aboutCTA'],
+            enum: ['hero', 'about', 'footer', 'topHeader', 'navbar', 'contact', 'digitalProducts', 'whatWeProvide', 'aboutHero', 'aboutMission', 'aboutStats', 'aboutFeatures', 'aboutFounder', 'aboutGlobal', 'aboutCTA'],
             unique: true
         },
         heroContent: heroContentSchema,
-        popularCourseContent: popularCourseContentSchema,
         digitalProductsContent: digitalProductsContentSchema,
         whatWeProvideContent: whatWeProvideContentSchema,
         contactContent: contactContentSchema,

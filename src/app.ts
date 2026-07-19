@@ -37,6 +37,7 @@ import { PageContentRoutes } from './app/modules/pageContent/pageContent.routes'
 import { BlogRoutes } from './app/modules/blog/blog.routes';
 import { CustomizationRoutes } from './app/modules/customization/customization.module';
 import { TestimonialRoutes } from './app/modules/testimonial/testimonial.routes';
+import { ProjectTrackerRoutes } from './app/modules/projectTracker/projectTracker.module';
 
 // ==================== App Initialization ====================
 const app: Application = express();
@@ -195,6 +196,9 @@ app.use('/api/customization', CustomizationRoutes);
 
 // Testimonial routes (client testimonials and reviews)
 app.use('/api/testimonials', TestimonialRoutes);
+
+// Project Tracker routes (custom project orders + monthly accounting)
+app.use('/api/project-tracker', ProjectTrackerRoutes);
 
 // ==================== Error Handling ====================
 // 404 Not Found handler (must be after all routes)
