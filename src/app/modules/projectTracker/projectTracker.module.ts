@@ -72,7 +72,9 @@ export interface IProjectClient {
     phone: string;
     email?: string;
     websiteType: string;
-    packageType: string; // with_domain_hosting | without_domain_hosting
+    // read এ dynamic: linked domain এর Type দেখে auto হয়
+    // with_domain_hosting | with_domain | with_hosting | without_domain_hosting
+    packageType: string;
     // ক্লায়েন্ট ব্রিফ (সব optional)
     desiredWebsiteName?: string; // কাঙ্ক্ষিত ওয়েবসাইটের নাম
     referenceWebsite?: string; // রেফারেন্স ওয়েবসাইট (link)
@@ -516,11 +518,21 @@ const ProjectTrackerService = {
         projects = projects.map((p) => {
             const linked = byProject[p.projectId] || [];
             const has = linked.length > 0;
+            // linked domain এর Type (domain / hosting / both) দেখে packageType — ৩ রকম হতে পারে
+            const hasDomain = linked.some((d) => (d.type || 'both') === 'domain' || (d.type || 'both') === 'both');
+            const hasHosting = linked.some((d) => (d.type || 'both') === 'hosting' || (d.type || 'both') === 'both');
+            const packageType = hasDomain && hasHosting
+                ? 'with_domain_hosting'
+                : hasDomain
+                    ? 'with_domain'
+                    : hasHosting
+                        ? 'with_hosting'
+                        : 'without_domain_hosting';
             return {
                 ...p,
                 linkedDomains: linked,
                 hasDomainHosting: has,
-                packageType: has ? 'with_domain_hosting' : 'without_domain_hosting', // dynamic
+                packageType, // dynamic
                 domainBuy: linked.reduce((s, d) => s + (d.buyPrice || 0), 0),
                 domainSell: linked.reduce((s, d) => s + (d.sellPrice || 0), 0),
                 domainProfitLinked: linked.reduce((s, d) => s + (d.profit || 0), 0),
