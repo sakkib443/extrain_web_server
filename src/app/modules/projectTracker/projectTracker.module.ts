@@ -767,24 +767,29 @@ const ProjectTrackerService = {
         return doc;
     },
 
-    // ---------- Domain / Hosting ----------
-    async getDomains() {
-        return Domain.find().sort({ createdAt: -1 });
+    // ---------- Domain / Hosting (মাসভিত্তিক — purchaseDate অনুযায়ী) ----------
+    async getDomains(month?: string) {
+        let domains = await Domain.find().sort({ createdAt: -1 });
+        if (month) {
+            domains = domains.filter(
+                (d) => d.purchaseDate && new Date(d.purchaseDate).toISOString().slice(0, 7) === month
+            );
+        }
+        return domains;
     },
 
-    async getDomainSummary() {
-        const [agg] = await Domain.aggregate([
-            {
-                $group: {
-                    _id: null,
-                    count: { $sum: 1 },
-                    totalBuy: { $sum: '$buyPrice' },
-                    totalSell: { $sum: '$sellPrice' },
-                    totalProfit: { $sum: '$profit' },
-                },
+    async getDomainSummary(month?: string) {
+        const domains = await this.getDomains(month);
+        return domains.reduce(
+            (acc, d) => {
+                acc.count += 1;
+                acc.totalBuy += d.buyPrice || 0;
+                acc.totalSell += d.sellPrice || 0;
+                acc.totalProfit += d.profit || 0;
+                return acc;
             },
-        ]);
-        return agg || { count: 0, totalBuy: 0, totalSell: 0, totalProfit: 0 };
+            { count: 0, totalBuy: 0, totalSell: 0, totalProfit: 0 }
+        );
     },
 
     async createDomain(payload: any) {
@@ -907,11 +912,11 @@ const C = {
     }),
     // ---- Domains ----
     getDomains: catchAsync(async (req, res) => {
-        const data = await ProjectTrackerService.getDomains();
+        const data = await ProjectTrackerService.getDomains(req.query.month as string);
         sendResponse(res, { statusCode: 200, success: true, message: 'Domains fetched', data });
     }),
     getDomainSummary: catchAsync(async (req, res) => {
-        const data = await ProjectTrackerService.getDomainSummary();
+        const data = await ProjectTrackerService.getDomainSummary(req.query.month as string);
         sendResponse(res, { statusCode: 200, success: true, message: 'Domain summary', data });
     }),
     createDomain: catchAsync(async (req, res) => {
