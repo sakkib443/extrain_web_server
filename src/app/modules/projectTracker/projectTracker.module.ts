@@ -805,6 +805,8 @@ const ProjectTrackerService = {
             ...p,
             domainProfit,
             totalExpenses,
+            // শুধু ওয়েবসাইট থেকে — যা উঠেছে বাদ যা খরচ হয়েছে (ডোমেইন/হোস্টিং এখানে নেই)
+            websiteProfit: p.totalCollection - totalExpenses,
             // Total Profit = Collection + Domain/Hosting এর net impact (registry) - Expenses
             totalProfit: p.totalCollection + domainProfit - totalExpenses,
             pendingRequests: await ProjectClient.countDocuments({ status: 'request' }),
