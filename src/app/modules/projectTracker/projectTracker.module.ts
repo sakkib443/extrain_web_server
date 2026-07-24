@@ -52,6 +52,7 @@ export interface IReceipt {
         delivery?: boolean;
         due?: boolean;
         contact?: boolean;
+        splitDomain?: boolean;
     };
     sentToEmail?: string;
     emailSent?: boolean;
@@ -242,6 +243,7 @@ const projectClientSchema = new Schema<IProjectClient>(
                     delivery: { type: Boolean },
                     due: { type: Boolean },
                     contact: { type: Boolean },
+                    splitDomain: { type: Boolean }, // ওয়েবসাইট ও ডোমেইনের টাকা আলাদা দেখানো হয়েছিল কি না
                 },
                 sentToEmail: { type: String },
                 emailSent: { type: Boolean },
