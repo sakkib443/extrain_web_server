@@ -138,6 +138,7 @@ export interface IDomain {
     fromProject?: boolean; // Confirm Order থেকে auto তৈরি — তাই auto মুছেও ফেলা যায়
     buyPrice: number; // combined (ডোমেইন+হোস্টিং একসাথে হলেও একটাই)
     sellPrice: number;
+    clientPaid: number; // ক্লায়েন্ট ডোমেইন/হোস্টিং বাবদ কত দিয়েছে (বাকিটা domain due)
     profit: number; // auto = sell - buy
     provider?: string; // যেখান থেকে কেনা (namecheap ইত্যাদি)
     purchaseDate?: Date;
@@ -286,6 +287,7 @@ const domainSchema = new Schema<IDomain>(
         fromProject: { type: Boolean, default: false },
         buyPrice: { type: Number, default: 0 },
         sellPrice: { type: Number, default: 0 },
+        clientPaid: { type: Number, default: 0 },
         profit: { type: Number, default: 0 },
         provider: { type: String, trim: true },
         purchaseDate: { type: Date },
@@ -300,11 +302,34 @@ domainSchema.pre('save', function (next) {
 });
 export const Domain = model<IDomain>('Domain', domainSchema, 'domains');
 
-// একটা domain রেকর্ড মাসের মোট লাভে আসলে কতটা যোগ করে।
-// included হলে sell টা project এর installment হিসেবেই totalCollection এ ধরা আছে —
-// তাই আবার sell যোগ করলে দুবার গোনা হবে; শুধু আমাদের খরচটাই বাদ যাবে।
+// একটা domain রেকর্ড মাসের মোট লাভে কতটা যোগ করে।
+// included → sell টা প্রজেক্টের totalProjectAmount এর ভিতরে, আর project এর collection
+//   থেকে clientPaid টা বাদ দিয়ে website collection হিসাব হয় — তাই এখানে clientPaid ধরা হয়।
+// separate → টাকাটা প্রজেক্টের বাইরে, পুরো sell ধরা হয় (পুরনো আচরণ অপরিবর্তিত)।
 export const domainRevenueImpact = (d: any): number =>
-    (d?.billing === 'included' ? 0 : d?.sellPrice || 0) - (d?.buyPrice || 0);
+    (d?.billing === 'included' ? d?.clientPaid || 0 : d?.sellPrice || 0) - (d?.buyPrice || 0);
+
+// প্রজেক্টের সাথে যুক্ত domain গুলো থেকে included অংশ আলাদা করে
+// website-only টাকার হিসাব (Tracker এ এইটাই দেখানো হয়)
+export const splitProjectMoney = (project: any, linked: any[] = []) => {
+    const included = linked.filter((d) => d.billing === 'included');
+    const domainSell = included.reduce((s, d) => s + (d.sellPrice || 0), 0);
+    const domainPaid = included.reduce((s, d) => s + (d.clientPaid || 0), 0);
+
+    const websiteAmount = Math.max(0, (project.totalProjectAmount || 0) - domainSell);
+    const websitePaid = Math.max(0, (project.totalPaid || 0) - domainPaid);
+    const websiteDue = Math.max(0, websiteAmount - websitePaid);
+
+    return {
+        domainSellIncluded: domainSell,
+        domainPaidIncluded: domainPaid,
+        domainDueIncluded: Math.max(0, domainSell - domainPaid),
+        websiteAmount,
+        websitePaid,
+        websiteDue,
+        websiteDuePercentage: websiteAmount > 0 ? Math.round((websiteDue / websiteAmount) * 100) : 0,
+    };
+};
 
 // ==================== VALIDATION ====================
 // Public client form — ক্লায়েন্ট যেটুকু fill করবে
@@ -525,6 +550,7 @@ const ProjectTrackerService = {
             fromProject: true,
             buyPrice: Number(d.buyPrice) || 0,
             sellPrice: Number(d.sellPrice) || 0,
+            clientPaid: Number(d.clientPaid) || 0,
             provider: d.provider || undefined,
             purchaseDate: d.purchaseDate ? new Date(d.purchaseDate) : project.orderDate || new Date(),
             expiryDate: d.expiryDate ? new Date(d.expiryDate) : undefined,
@@ -594,6 +620,8 @@ const ProjectTrackerService = {
                 domainBuy: linked.reduce((s, d) => s + (d.buyPrice || 0), 0),
                 domainSell: linked.reduce((s, d) => s + (d.sellPrice || 0), 0),
                 domainProfitLinked: linked.reduce((s, d) => s + (d.profit || 0), 0),
+                // Tracker এ Total/Paid/Due — ডোমেইনের অংশ বাদ দিয়ে শুধু ওয়েবসাইটের টাকা
+                ...splitProjectMoney(p, linked),
             };
         });
         return projects;
@@ -740,11 +768,12 @@ const ProjectTrackerService = {
     // Google Sheet এর উপরের summary block (cancelled সহ — রিফান্ড না করলে টাকা থাকে)
     async getSummary(month?: string) {
         const projects = await this.getProjects(month);
+        // ডোমেইনের অংশ বাদ দিয়ে — ওটা Domain registry তে আলাদা করে হিসাব হয়
         const p = projects.reduce(
             (acc, x: any) => {
-                acc.totalProjectValue += x.totalProjectAmount || 0;
-                acc.totalCollection += x.totalPaid || 0;
-                acc.totalDue += x.totalDue || 0;
+                acc.totalProjectValue += x.websiteAmount ?? x.totalProjectAmount ?? 0;
+                acc.totalCollection += x.websitePaid ?? x.totalPaid ?? 0;
+                acc.totalDue += x.websiteDue ?? x.totalDue ?? 0;
                 return acc;
             },
             { totalProjectValue: 0, totalCollection: 0, totalDue: 0 }
@@ -862,11 +891,16 @@ const ProjectTrackerService = {
                 acc.totalBuy += d.buyPrice || 0;
                 acc.totalSell += d.sellPrice || 0;
                 acc.totalProfit += d.profit || 0; // raw sell - buy (billing নির্বিশেষে)
+                acc.totalClientPaid += d.clientPaid || 0;
+                acc.totalDue += Math.max(0, (d.sellPrice || 0) - (d.clientPaid || 0));
                 acc.revenueImpact += domainRevenueImpact(d); // মাসের লাভে আসল অবদান
                 if (d.billing === 'included') acc.includedCount += 1;
                 return acc;
             },
-            { count: 0, totalBuy: 0, totalSell: 0, totalProfit: 0, revenueImpact: 0, includedCount: 0 }
+            {
+                count: 0, totalBuy: 0, totalSell: 0, totalProfit: 0,
+                totalClientPaid: 0, totalDue: 0, revenueImpact: 0, includedCount: 0,
+            }
         );
     },
 
@@ -875,6 +909,7 @@ const ProjectTrackerService = {
             ...payload,
             buyPrice: Number(payload.buyPrice) || 0,
             sellPrice: Number(payload.sellPrice) || 0,
+            clientPaid: Number(payload.clientPaid) || 0,
             hostingGB: payload.hostingGB ? Number(payload.hostingGB) : undefined,
             purchaseDate: payload.purchaseDate ? new Date(payload.purchaseDate) : new Date(),
             expiryDate: payload.expiryDate ? new Date(payload.expiryDate) : undefined,
@@ -887,6 +922,7 @@ const ProjectTrackerService = {
         Object.assign(doc, payload);
         if (payload.buyPrice !== undefined) doc.buyPrice = Number(payload.buyPrice) || 0;
         if (payload.sellPrice !== undefined) doc.sellPrice = Number(payload.sellPrice) || 0;
+        if (payload.clientPaid !== undefined) doc.clientPaid = Number(payload.clientPaid) || 0;
         if (payload.hostingGB !== undefined) doc.hostingGB = payload.hostingGB ? Number(payload.hostingGB) : undefined;
         if (payload.purchaseDate) doc.purchaseDate = new Date(payload.purchaseDate);
         if (payload.expiryDate) doc.expiryDate = new Date(payload.expiryDate);
