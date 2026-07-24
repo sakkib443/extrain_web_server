@@ -132,6 +132,10 @@ export interface IDomain {
     owner?: string;
     linkedProjectId?: string; // EXP... projectId
     linkedClientName?: string; // display এর জন্য
+    // included = দাম প্রজেক্টের totalProjectAmount এর ভিতরে (sell টা installment এই আদায় হয়)
+    // separate = ডোমেইন/হোস্টিং এর আলাদা পেমেন্ট (প্রজেক্টের টাকার বাইরে)
+    billing?: 'included' | 'separate';
+    fromProject?: boolean; // Confirm Order থেকে auto তৈরি — তাই auto মুছেও ফেলা যায়
     buyPrice: number; // combined (ডোমেইন+হোস্টিং একসাথে হলেও একটাই)
     sellPrice: number;
     profit: number; // auto = sell - buy
@@ -277,6 +281,9 @@ const domainSchema = new Schema<IDomain>(
         owner: { type: String, trim: true },
         linkedProjectId: { type: String, trim: true },
         linkedClientName: { type: String, trim: true },
+        // পুরনো রেকর্ডে billing নেই — default 'separate' ধরায় আগের হিসাব অপরিবর্তিত থাকে
+        billing: { type: String, enum: ['included', 'separate'], default: 'separate' },
+        fromProject: { type: Boolean, default: false },
         buyPrice: { type: Number, default: 0 },
         sellPrice: { type: Number, default: 0 },
         profit: { type: Number, default: 0 },
@@ -292,6 +299,12 @@ domainSchema.pre('save', function (next) {
     next();
 });
 export const Domain = model<IDomain>('Domain', domainSchema, 'domains');
+
+// একটা domain রেকর্ড মাসের মোট লাভে আসলে কতটা যোগ করে।
+// included হলে sell টা project এর installment হিসেবেই totalCollection এ ধরা আছে —
+// তাই আবার sell যোগ করলে দুবার গোনা হবে; শুধু আমাদের খরচটাই বাদ যাবে।
+export const domainRevenueImpact = (d: any): number =>
+    (d?.billing === 'included' ? 0 : d?.sellPrice || 0) - (d?.buyPrice || 0);
 
 // ==================== VALIDATION ====================
 // Public client form — ক্লায়েন্ট যেটুকু fill করবে
@@ -486,17 +499,62 @@ const ProjectTrackerService = {
     },
 
     // ---------- Projects ----------
+    // packageType অনুযায়ী Domain/Hosting registry sync করে।
+    // without_domain_hosting → এই project থেকে auto তৈরি রেকর্ড মুছে যায়
+    // (হাতে যোগ করা রেকর্ডে হাত পড়ে না — শুধু fromProject: true গুলো)।
+    async syncProjectDomain(project: any, dh: any) {
+        const projectId = project?.projectId;
+        if (!projectId) return;
+
+        const pkg = project.packageType || 'without_domain_hosting';
+        if (pkg === 'without_domain_hosting') {
+            await Domain.deleteMany({ linkedProjectId: projectId, fromProject: true });
+            return;
+        }
+
+        const type = pkg === 'with_domain_hosting' ? 'both' : pkg === 'with_hosting' ? 'hosting' : 'domain';
+        const d = dh || {};
+        const fields: any = {
+            domainName: d.domainName || project.desiredWebsiteName || project.clientName,
+            type,
+            hostingGB: d.hostingGB ? Number(d.hostingGB) : undefined,
+            owner: d.owner || project.clientName,
+            linkedProjectId: projectId,
+            linkedClientName: `${project.clientName}${project.companyBrand ? ` (${project.companyBrand})` : ''}`,
+            billing: d.billing === 'included' ? 'included' : 'separate',
+            fromProject: true,
+            buyPrice: Number(d.buyPrice) || 0,
+            sellPrice: Number(d.sellPrice) || 0,
+            provider: d.provider || undefined,
+            purchaseDate: d.purchaseDate ? new Date(d.purchaseDate) : project.orderDate || new Date(),
+            expiryDate: d.expiryDate ? new Date(d.expiryDate) : undefined,
+            note: d.note || undefined,
+        };
+
+        // একই project এ বারবার confirm/edit করলে যেন duplicate না হয়
+        const existing = await Domain.findOne({ linkedProjectId: projectId, fromProject: true });
+        if (existing) {
+            Object.assign(existing, fields);
+            await existing.save(); // pre-save: profit auto
+            return existing;
+        }
+        return Domain.create(fields);
+    },
+
     async createProject(payload: any) {
+        const { domainHosting, ...rest } = payload;
         const orderDate = payload.orderDate ? new Date(payload.orderDate) : new Date();
         const serial = await nextProjectSerial();
-        return ProjectClient.create({
-            ...payload,
+        const doc = await ProjectClient.create({
+            ...rest,
             orderDate,
             status: payload.status && payload.status !== 'request' ? payload.status : 'pending',
             slNo: await nextSlNo(),
             projectSerial: serial,
             projectId: makeProjectId(serial, orderDate),
         });
+        await this.syncProjectDomain(doc, domainHosting);
+        return doc;
     },
 
     async getProjects(month?: string, status?: string) {
@@ -544,8 +602,13 @@ const ProjectTrackerService = {
     async updateProject(id: string, payload: any) {
         const doc = await ProjectClient.findById(id);
         if (!doc) throw new AppError(404, 'Project not found');
-        Object.assign(doc, payload);
+        // domainHosting schema field নয় — Domain registry তে আলাদা করে sync হয়
+        const { domainHosting, ...rest } = payload;
+        Object.assign(doc, rest);
         await doc.save(); // pre-save hook এ সব auto হিসাব
+        if (payload.packageType !== undefined || domainHosting) {
+            await this.syncProjectDomain(doc, domainHosting);
+        }
         return doc;
     },
 
@@ -702,7 +765,8 @@ const ProjectTrackerService = {
                   (d) => d.purchaseDate && new Date(d.purchaseDate).toISOString().slice(0, 7) === month
               )
             : allDomains;
-        const domainProfit = monthDomains.reduce((s, d) => s + (d.profit || 0), 0);
+        // billing অনুযায়ী — included হলে sell আগেই collection এ আছে, শুধু খরচ বাদ যায়
+        const domainProfit = monthDomains.reduce((s, d) => s + domainRevenueImpact(d), 0);
 
         return {
             month: month || 'all',
@@ -710,7 +774,7 @@ const ProjectTrackerService = {
             ...p,
             domainProfit,
             totalExpenses,
-            // Total Profit = Collection + Domain/Hosting Profit (registry) - Expenses
+            // Total Profit = Collection + Domain/Hosting এর net impact (registry) - Expenses
             totalProfit: p.totalCollection + domainProfit - totalExpenses,
             pendingRequests: await ProjectClient.countDocuments({ status: 'request' }),
         };
@@ -797,10 +861,12 @@ const ProjectTrackerService = {
                 acc.count += 1;
                 acc.totalBuy += d.buyPrice || 0;
                 acc.totalSell += d.sellPrice || 0;
-                acc.totalProfit += d.profit || 0;
+                acc.totalProfit += d.profit || 0; // raw sell - buy (billing নির্বিশেষে)
+                acc.revenueImpact += domainRevenueImpact(d); // মাসের লাভে আসল অবদান
+                if (d.billing === 'included') acc.includedCount += 1;
                 return acc;
             },
-            { count: 0, totalBuy: 0, totalSell: 0, totalProfit: 0 }
+            { count: 0, totalBuy: 0, totalSell: 0, totalProfit: 0, revenueImpact: 0, includedCount: 0 }
         );
     },
 
