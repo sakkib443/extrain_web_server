@@ -371,8 +371,10 @@ const nextSlNo = async (): Promise<number> => {
 };
 
 // Project ID: EXP + YY + MM + serial (গ্লোবাল, এক করে বাড়ে) — যেমন EXP2607019
+// শুধু সত্যিকারের (confirm হওয়া) project এর serial গোনা হয় — request/rejected বাদ।
+// তাই delete/reject হওয়া request কোনো নম্বর "খেয়ে ফেলে" না, আর সবশেষ অর্ডার থেকে ঠিক এক বাড়ে।
 const nextProjectSerial = async (): Promise<number> => {
-    const last = await ProjectClient.findOne({ projectSerial: { $exists: true } })
+    const last = await ProjectClient.findOne({ projectSerial: { $exists: true }, status: ACTIVE })
         .sort({ projectSerial: -1 })
         .select('projectSerial');
     return (last?.projectSerial || 0) + 1;
@@ -383,20 +385,37 @@ const makeProjectId = (serial: number, date: Date): string => {
     return `EXP${yy}${mm}${String(serial).padStart(3, '0')}`;
 };
 
+// EXP নম্বর কেবল active (confirm হওয়া) অর্ডারেই থাকে।
+// request/rejected হলে নম্বর মুছে দেয়; active অথচ নম্বর নেই → নতুন করে বসায়।
+// admin হাতে projectId এডিট করলে সেটাই রাখে (duplicate হলেও সমস্যা নেই)।
+const ensureProjectId = async (doc: any): Promise<void> => {
+    if (doc.status === 'request' || doc.status === 'rejected') {
+        doc.projectId = undefined;
+        doc.projectSerial = undefined;
+        return;
+    }
+    if (!doc.projectId || !String(doc.projectId).trim()) {
+        const serial = await nextProjectSerial();
+        doc.projectSerial = serial;
+        doc.projectId = makeProjectId(serial, doc.orderDate || new Date());
+    }
+};
+
 const ProjectTrackerService = {
     // ---------- Client side ----------
     // অর্ডার রিকোয়েস্ট তৈরি + (email থাকলে) অটো user account বানানো ও auto-login token ফেরত
     async createRequest(payload: any): Promise<{ doc: IProjectClient; account: any }> {
         const orderDate = new Date();
-        const serial = await nextProjectSerial();
+        // request এ EXP নম্বর দেওয়া হয় না — confirm হলে তখন বসবে।
+        // তাই reject/delete হওয়া request কোনো নম্বর নষ্ট করে না।
         const doc = await ProjectClient.create({
             ...payload,
+            projectId: undefined,
+            projectSerial: undefined,
             email: payload.email || undefined,
             orderDate,
             status: 'request',
             slNo: await nextSlNo(),
-            projectSerial: serial,
-            projectId: makeProjectId(serial, orderDate),
         });
 
         try {
@@ -487,6 +506,7 @@ const ProjectTrackerService = {
         const doc = await ProjectClient.findById(id);
         if (!doc) throw new AppError(404, 'Request not found');
         doc.status = approve ? 'pending' : 'rejected';
+        await ensureProjectId(doc); // approve হলে EXP নম্বর বসে, reject হলে মুছে যায়
         await doc.save();
         return doc;
     },
@@ -519,7 +539,10 @@ const ProjectTrackerService = {
         }
 
         // ---- Order Confirmation ---- request → active (tracker এ চলে যায়)
-        if (data.orderConfirmed) doc.status = 'pending';
+        if (data.orderConfirmed) {
+            doc.status = 'pending';
+            await ensureProjectId(doc); // confirm হলেই EXP নম্বর তৈরি হয়
+        }
 
         await doc.save(); // pre-save hook: totalPaid / totalDue / duePercentage auto হিসাব
         return doc;
@@ -572,14 +595,19 @@ const ProjectTrackerService = {
     async createProject(payload: any) {
         const { domainHosting, ...rest } = payload;
         const orderDate = payload.orderDate ? new Date(payload.orderDate) : new Date();
-        const serial = await nextProjectSerial();
+        const explicitId = (rest.projectId || '').trim();
         const doc = await ProjectClient.create({
             ...rest,
             orderDate,
             status: payload.status && payload.status !== 'request' ? payload.status : 'pending',
             slNo: await nextSlNo(),
-            projectSerial: serial,
-            projectId: makeProjectId(serial, orderDate),
+            // admin নম্বর দিলে সেটাই; নাহলে সবশেষ অর্ডার থেকে এক বাড়িয়ে auto
+            ...(explicitId
+                ? { projectId: explicitId }
+                : await (async () => {
+                    const serial = await nextProjectSerial();
+                    return { projectSerial: serial, projectId: makeProjectId(serial, orderDate) };
+                })()),
         });
         await this.syncProjectDomain(doc, domainHosting);
         return doc;
@@ -635,6 +663,9 @@ const ProjectTrackerService = {
         // domainHosting schema field নয় — Domain registry তে আলাদা করে sync হয়
         const { domainHosting, ...rest } = payload;
         Object.assign(doc, rest);
+        // request → active (confirm) হলে EXP নম্বর বসে; active এ নম্বর মুছলে আবার তৈরি হয়।
+        // sync এর আগে করা হয় যাতে নতুন projectId নিয়ে domain link হয়।
+        await ensureProjectId(doc);
         await doc.save(); // pre-save hook এ সব auto হিসাব
         if (payload.packageType !== undefined || domainHosting) {
             await this.syncProjectDomain(doc, domainHosting);
