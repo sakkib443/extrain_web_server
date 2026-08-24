@@ -370,35 +370,80 @@ const nextSlNo = async (): Promise<number> => {
     return (last?.slNo || 0) + 1;
 };
 
-// Project ID: EXP + YY + MM + serial (গ্লোবাল, এক করে বাড়ে) — যেমন EXP2607019
-// শুধু সত্যিকারের (confirm হওয়া) project এর serial গোনা হয় — request/rejected বাদ।
-// তাই delete/reject হওয়া request কোনো নম্বর "খেয়ে ফেলে" না, আর সবশেষ অর্ডার থেকে ঠিক এক বাড়ে।
-const nextProjectSerial = async (): Promise<number> => {
-    const last = await ProjectClient.findOne({ projectSerial: { $exists: true }, status: ACTIVE })
-        .sort({ projectSerial: -1 })
-        .select('projectSerial');
-    return (last?.projectSerial || 0) + 1;
-};
+// ==================== ORDER NUMBER (Project ID) ====================
+// ফরম্যাট: EXP + YY + MM + serial — যেমন EXP2608043
+// নিয়ম: নম্বর বসে কেবল approve/confirm করার মুহূর্তে, আর সেটা হয়
+//       "ডাটাবেজে এখন যত নম্বর আছে তার সবচেয়ে বড়টা + ১"।
+//       তাই একসাথে ৫টা request এলেও যেটা আগে approve হবে সেটাই আগের নম্বরটা পাবে।
+
 const makeProjectId = (serial: number, date: Date): string => {
     const yy = String(date.getFullYear()).slice(-2);
     const mm = String(date.getMonth() + 1).padStart(2, '0');
     return `EXP${yy}${mm}${String(serial).padStart(3, '0')}`;
 };
 
-// EXP নম্বর কেবল active (confirm হওয়া) অর্ডারেই থাকে।
-// request/rejected হলে নম্বর মুছে দেয়; active অথচ নম্বর নেই → নতুন করে বসায়।
-// admin হাতে projectId এডিট করলে সেটাই রাখে (duplicate হলেও সমস্যা নেই)।
+// projectId স্ট্রিং থেকে সিরিয়াল নম্বরটা বের করে আনে — "EXP2608042" → 42
+// সংখ্যার প্রথম ৪ ডিজিট YYMM, বাকিটাই serial। প্রিফিক্স যা-ই হোক (EXP/EWP/হাতে লেখা) কাজ করে।
+const serialFromProjectId = (projectId?: string | null): number => {
+    const digits = String(projectId || '').replace(/\D/g, '');
+    if (digits.length < 5) return 0; // YYMM + অন্তত ১ ডিজিট serial না থাকলে ধরা যাবে না
+    return Number(digits.slice(4)) || 0;
+};
+
+// পরের নম্বর = ডাটাবেজের সবচেয়ে বড় নম্বর + ১।
+// projectId-ই মূল সত্য — admin হাতে নম্বর এডিট করলেও সেটা হিসাবে ধরা হয়
+// (আগে শুধু projectSerial ফিল্ড দেখা হতো, হাতে এডিট করলে সেটা পিছিয়ে থাকত → duplicate ID আসত)।
+// status দিয়ে ফিল্টার করা হয় না — rejected/cancelled অর্ডারের নম্বরও "দখল" হিসেবেই থাকে,
+// তাই একই নম্বর দুজন ক্লায়েন্ট কখনো পাবে না।
+const nextProjectSerial = async (): Promise<number> => {
+    const rows = await ProjectClient.find({
+        $or: [{ projectId: { $nin: [null, ''] } }, { projectSerial: { $gt: 0 } }],
+    })
+        .select('projectId projectSerial')
+        .lean();
+
+    let max = 0;
+    for (const r of rows as { projectId?: string; projectSerial?: number }[]) {
+        max = Math.max(max, serialFromProjectId(r.projectId), Number(r.projectSerial) || 0);
+    }
+    return max + 1;
+};
+
+// নম্বরটা "দখল" করে। দুটো approve প্রায় একসাথে হলে যদি ID আগেই নেওয়া হয়ে থাকে,
+// পরেরটা নিয়ে আবার চেষ্টা করে — তাই duplicate ID তৈরি হয় না।
+const claimProjectId = async (date: Date): Promise<{ projectSerial: number; projectId: string }> => {
+    let serial = await nextProjectSerial();
+    for (let i = 0; i < 25; i++) {
+        const projectId = makeProjectId(serial, date);
+        if (!(await ProjectClient.exists({ projectId }))) return { projectSerial: serial, projectId };
+        serial += 1;
+    }
+    throw new AppError(500, 'অর্ডার নম্বর তৈরি করা যায়নি, আবার চেষ্টা করুন');
+};
+
+// যে request এখনো approve হয়নি তাতে নম্বর বসে না — তাই reject/delete হওয়া request
+// কোনো নম্বর নষ্ট করে না। একবার approve হয়ে নম্বর বসে গেলে সেটা আর মুছে যায় না
+// (পরে reject করলেও), নইলে ওই নম্বর আরেকজন পেয়ে যেত।
 const ensureProjectId = async (doc: any): Promise<void> => {
-    if (doc.status === 'request' || doc.status === 'rejected') {
+    if (doc.status === 'request' || (doc.status === 'rejected' && !doc.projectId)) {
         doc.projectId = undefined;
         doc.projectSerial = undefined;
         return;
     }
-    if (!doc.projectId || !String(doc.projectId).trim()) {
-        const serial = await nextProjectSerial();
-        doc.projectSerial = serial;
-        doc.projectId = makeProjectId(serial, doc.orderDate || new Date());
+
+    const current = String(doc.projectId || '').trim();
+    if (!current) {
+        // approve/confirm এর মুহূর্ত — এখানেই নম্বর তৈরি হয়
+        const claimed = await claimProjectId(doc.orderDate || new Date());
+        doc.projectSerial = claimed.projectSerial;
+        doc.projectId = claimed.projectId;
+        return;
     }
+
+    // admin হাতে নম্বর লিখলে সেটাই রাখি, তবে projectSerial-ও মিলিয়ে দিই —
+    // নাহলে পরের auto নম্বর পিছিয়ে গিয়ে আবার ভুল আসবে।
+    doc.projectId = current;
+    doc.projectSerial = serialFromProjectId(current) || doc.projectSerial;
 };
 
 const ProjectTrackerService = {
@@ -601,13 +646,11 @@ const ProjectTrackerService = {
             orderDate,
             status: payload.status && payload.status !== 'request' ? payload.status : 'pending',
             slNo: await nextSlNo(),
-            // admin নম্বর দিলে সেটাই; নাহলে সবশেষ অর্ডার থেকে এক বাড়িয়ে auto
+            // admin নম্বর দিলে সেটাই (projectSerial-ও সেই নম্বর থেকেই বসে, নইলে পরেরটা ভুল আসবে);
+            // নাহলে ডাটাবেজের সবচেয়ে বড় নম্বর থেকে এক বাড়িয়ে auto
             ...(explicitId
-                ? { projectId: explicitId }
-                : await (async () => {
-                    const serial = await nextProjectSerial();
-                    return { projectSerial: serial, projectId: makeProjectId(serial, orderDate) };
-                })()),
+                ? { projectId: explicitId, projectSerial: serialFromProjectId(explicitId) || undefined }
+                : await claimProjectId(orderDate)),
         });
         await this.syncProjectDomain(doc, domainHosting);
         return doc;
