@@ -13,6 +13,10 @@ import config from '../../config';
 // AUTH CONTROLLER
 // ===================================================================
 
+// refreshToken cookie-র মেয়াদ — কার্যত "কখনো শেষ হবে না" (১০ বছর)।
+// টোকেন নিজে non-expiring, কুকিটাও যেন আগে মুছে না যায় তাই এত লম্বা।
+const REFRESH_COOKIE_MAX_AGE = 10 * 365 * 24 * 60 * 60 * 1000; // 10 years
+
 const AuthController = {
   // ==================== REGISTER ====================
   /**
@@ -45,7 +49,7 @@ const AuthController = {
       httpOnly: true,
       secure: config.env === 'production',
       sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      maxAge: REFRESH_COOKIE_MAX_AGE,
     });
 
     sendResponse(res, {
@@ -69,7 +73,7 @@ const AuthController = {
       httpOnly: true,
       secure: config.env === 'production',
       sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
+      maxAge: REFRESH_COOKIE_MAX_AGE,
     });
 
     sendResponse(res, {
@@ -107,7 +111,7 @@ const AuthController = {
       httpOnly: true,
       secure: config.env === 'production',
       sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
+      maxAge: REFRESH_COOKIE_MAX_AGE,
     });
 
     sendResponse(res, {

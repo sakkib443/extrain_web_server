@@ -3,7 +3,7 @@
 // Authentication business logic (login, register, token management)
 // ===================================================================
 
-import jwt, { JwtPayload, SignOptions } from 'jsonwebtoken';
+import jwt, { JwtPayload } from 'jsonwebtoken';
 import crypto from 'crypto';
 import config from '../../config';
 import AppError from '../../utils/AppError';
@@ -23,15 +23,12 @@ const AuthService = {
      * JWT tokens তৈরি করা
      */
     generateTokens(payload: IJwtPayload): ITokens {
-        // Access Token (Short lived - 1 day)
-        const accessToken = jwt.sign(payload, config.jwt.access_secret, {
-            expiresIn: config.jwt.access_expires_in as SignOptions['expiresIn'],
-        });
+        // দুটো টোকেনেই expiresIn দেওয়া হয় না — অর্থাৎ JWT-তে কোনো `exp` claim বসে না,
+        // ফলে টোকেন কখনো এক্সপায়ার করে না। একবার লগইন করলে ইউজার নিজে logout না করা
+        // পর্যন্ত সেশন টিকে থাকে (পাসওয়ার্ড বদলালে বা account block হলে তখনই কাটা পড়বে)।
+        const accessToken = jwt.sign(payload, config.jwt.access_secret);
 
-        // Refresh Token (Long lived - 7 days)
-        const refreshToken = jwt.sign(payload, config.jwt.refresh_secret, {
-            expiresIn: config.jwt.refresh_expires_in as SignOptions['expiresIn'],
-        });
+        const refreshToken = jwt.sign(payload, config.jwt.refresh_secret);
 
         return { accessToken, refreshToken };
     },

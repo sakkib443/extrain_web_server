@@ -25,8 +25,10 @@ export default {
   jwt: {
     access_secret: process.env.JWT_ACCESS_SECRET || 'your-super-secret-access-key',
     refresh_secret: process.env.JWT_REFRESH_SECRET || 'your-super-secret-refresh-key',
-    access_expires_in: process.env.JWT_ACCESS_EXPIRES_IN || '1d',
-    refresh_expires_in: process.env.JWT_REFRESH_EXPIRES_IN || '7d',
+    // NOTE: টোকেনের কোনো মেয়াদ নেই — একবার লগইন করলে সেশন আর এক্সপায়ার হয় না।
+    // তাই JWT_ACCESS_EXPIRES_IN / JWT_REFRESH_EXPIRES_IN env ইচ্ছাকৃতভাবেই আর পড়া হয় না
+    // (হোস্টিং-এ পুরোনো ভ্যালু সেট থাকলেও যেন সেশন কেটে না যায়)।
+    // মেয়াদ ফেরাতে চাইলে auth.service.ts এর generateTokens()-এ expiresIn ফিরিয়ে আনতে হবে।
   },
 
   // ==================== Bcrypt Configuration ====================
