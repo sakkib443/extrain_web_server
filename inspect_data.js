@@ -1,5 +1,7 @@
 const mongoose = require('mongoose');
-const DATABASE_URL = 'mongodb+srv://extraweb:extraweb@cluster0.b5kfivm.mongodb.net/extraweb?appName=Cluster0';
+require('dotenv').config({ path: require('path').join(__dirname, '.env') });
+const DATABASE_URL = process.env.DATABASE_URL;
+if (!DATABASE_URL) { console.error('DATABASE_URL পাওয়া যায়নি — .env ফাইলে সেট করুন (.env.example দেখুন)'); process.exit(1); }
 
 async function inspectData() {
     try {
