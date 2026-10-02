@@ -58,6 +58,14 @@ export interface IReceipt {
     emailSent?: boolean;
 }
 
+// প্রজেক্টের মোট দাম (totalProjectAmount) বদলের ইতিহাস — "All Projects" শিটের Price hover এ দেখানো হয়
+export interface IPriceChange {
+    from: number;
+    to: number;
+    at: Date;
+    note?: string;
+}
+
 export interface IProjectClient {
     _id?: Types.ObjectId;
     slNo?: number;
@@ -107,6 +115,11 @@ export interface IProjectClient {
     workingDays: number; // auto
     deliveryWeekOfMonth: number; // auto
     adminNote?: string;
+    // ---- "All Projects" শিট (admin dashboard) ----
+    websiteUrl?: string; // লাইভ ওয়েবসাইটের লিংক (না থাকলে linked domain থেকে বানানো হয়)
+    submittedBy?: string; // প্রজেক্টটা কে সাবমিট/ডেলিভারি করেছিল
+    assignedEmployee?: string; // আমাদের কোন এমপ্লয়ির আন্ডারে ছিল
+    priceHistory?: IPriceChange[]; // দাম বদলের ইতিহাস (কিস্তির ইতিহাস installments এ আছে)
     receipts?: IReceipt[]; // পাঠানো money receipt গুলোর history
     createdAt?: Date;
     updatedAt?: Date;
@@ -186,6 +199,16 @@ const installmentSchema = new Schema<IInstallment>(
     { _id: false }
 );
 
+const priceChangeSchema = new Schema<IPriceChange>(
+    {
+        from: { type: Number, default: 0 },
+        to: { type: Number, default: 0 },
+        at: { type: Date, default: Date.now },
+        note: { type: String },
+    },
+    { _id: false }
+);
+
 const projectClientSchema = new Schema<IProjectClient>(
     {
         slNo: { type: Number },
@@ -232,6 +255,10 @@ const projectClientSchema = new Schema<IProjectClient>(
         workingDays: { type: Number, default: 0 },
         deliveryWeekOfMonth: { type: Number, default: 0 },
         adminNote: { type: String },
+        websiteUrl: { type: String, trim: true },
+        submittedBy: { type: String, trim: true },
+        assignedEmployee: { type: String, trim: true },
+        priceHistory: { type: [priceChangeSchema], default: [] },
         receipts: [
             {
                 receiptNo: { type: String },
@@ -566,7 +593,14 @@ const ProjectTrackerService = {
         if (!total || total <= 0) {
             throw new AppError(400, 'অর্ডার কনফার্ম করতে Total Payment (অর্ডার অ্যামাউন্ট) দেওয়া বাধ্যতামূলক');
         }
+        const priceBefore = doc.totalProjectAmount || 0;
         doc.totalProjectAmount = total;
+        if (total !== priceBefore) {
+            doc.priceHistory = [
+                ...(doc.priceHistory || []),
+                { from: priceBefore, to: total, at: new Date(), note: 'Order confirmed' },
+            ];
+        }
 
         // Optional — না দিলেও সমস্যা নেই
         if (data.projectDeliveryDate) doc.projectDeliveryDate = new Date(data.projectDeliveryDate);
@@ -641,8 +675,12 @@ const ProjectTrackerService = {
         const { domainHosting, ...rest } = payload;
         const orderDate = payload.orderDate ? new Date(payload.orderDate) : new Date();
         const explicitId = (rest.projectId || '').trim();
+        const initialPrice = Number(rest.totalProjectAmount) || 0;
         const doc = await ProjectClient.create({
             ...rest,
+            ...(initialPrice > 0
+                ? { priceHistory: [{ from: 0, to: initialPrice, at: orderDate, note: 'Initial price' }] }
+                : {}),
             orderDate,
             status: payload.status && payload.status !== 'request' ? payload.status : 'pending',
             slNo: await nextSlNo(),
@@ -705,7 +743,15 @@ const ProjectTrackerService = {
         if (!doc) throw new AppError(404, 'Project not found');
         // domainHosting schema field নয় — Domain registry তে আলাদা করে sync হয়
         const { domainHosting, ...rest } = payload;
+        const priceBefore = doc.totalProjectAmount || 0;
         Object.assign(doc, rest);
+        // দাম বদলালে ইতিহাসে যোগ হয় (From → To, কবে)
+        if (rest.totalProjectAmount !== undefined && (doc.totalProjectAmount || 0) !== priceBefore) {
+            doc.priceHistory = [
+                ...(doc.priceHistory || []),
+                { from: priceBefore, to: doc.totalProjectAmount || 0, at: new Date() },
+            ];
+        }
         // request → active (confirm) হলে EXP নম্বর বসে; active এ নম্বর মুছলে আবার তৈরি হয়।
         // sync এর আগে করা হয় যাতে নতুন projectId নিয়ে domain link হয়।
         await ensureProjectId(doc);
@@ -713,6 +759,23 @@ const ProjectTrackerService = {
         if (payload.packageType !== undefined || domainHosting) {
             await this.syncProjectDomain(doc, domainHosting);
         }
+        return doc;
+    },
+
+    // "All Projects" শিটে টেবিলের ভিতর থেকেই লেখা তিনটা ঘর (লিংক / কে সাবমিট করেছে / কোন এমপ্লয়ির আন্ডারে)।
+    // পুরো save() চালানো হয় না (validation / হিসাব / নম্বর / domain sync কিছু না) — শুধু এই ফিল্ডগুলো $set হয়,
+    // তাই পুরনো অসম্পূর্ণ রেকর্ডেও নিরাপদ।
+    async updateSheetFields(id: string, payload: any) {
+        const allowed = ['websiteUrl', 'submittedBy', 'assignedEmployee'] as const;
+        const set: Record<string, string> = {};
+        for (const key of allowed) {
+            if (payload?.[key] !== undefined) set[key] = String(payload[key] ?? '').trim().slice(0, 300);
+        }
+        if (!Object.keys(set).length) throw new AppError(400, 'কিছু বদলানোর নেই');
+        const doc = await ProjectClient.findByIdAndUpdate(id, { $set: set }, { new: true, runValidators: false })
+            .select('_id websiteUrl submittedBy assignedEmployee')
+            .lean();
+        if (!doc) throw new AppError(404, 'Project not found');
         return doc;
     },
 
@@ -1057,6 +1120,10 @@ const C = {
         const data = await ProjectTrackerService.updateProject(req.params.id, req.body);
         sendResponse(res, { statusCode: 200, success: true, message: 'Project updated', data });
     }),
+    updateSheetFields: catchAsync(async (req, res) => {
+        const data = await ProjectTrackerService.updateSheetFields(req.params.id, req.body);
+        sendResponse(res, { statusCode: 200, success: true, message: 'Saved', data });
+    }),
     deleteProject: catchAsync(async (req, res) => {
         const data = await ProjectTrackerService.deleteProject(req.params.id);
         sendResponse(res, { statusCode: 200, success: true, message: 'Project deleted', data });
@@ -1149,6 +1216,7 @@ router.get('/admin/daily-stats', C.getDailyStats);
 router.get('/admin/projects', C.getProjects);
 router.post('/admin/projects', C.createProject);
 router.patch('/admin/projects/:id', C.updateProject);
+router.patch('/admin/projects/:id/sheet', C.updateSheetFields);
 router.delete('/admin/projects/:id', C.deleteProject);
 router.post('/admin/projects/:id/send-receipt', C.sendReceipt);
 
