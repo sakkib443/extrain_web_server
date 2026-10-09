@@ -16,7 +16,7 @@
 //   domainProfit  = domainClientPaid - domainOurCost
 //   totalPaid     = sum(installments.amount)
 //   totalDue      = totalProjectAmount - totalPaid
-//   Total Profit  = Collection + Domain/Hosting Profit - Expenses   (মাস ভিত্তিক)
+//   Total Profit  = Website Collection - Expenses   (মাস ভিত্তিক; ডোমেইন/হোস্টিং লাভ আলাদা ট্যাবে)
 // ===================================================================
 
 import { Schema, model, Types } from 'mongoose';
@@ -849,18 +849,20 @@ const ProjectTrackerService = {
 
     // ---------- Monthly folders ----------
     async getMonths() {
-        const projectMonths = await ProjectClient.aggregate([
-            { $match: { status: ACTIVE, orderDate: { $ne: null } } },
-            {
-                $group: {
-                    _id: monthExpr,
-                    projectCount: { $sum: 1 },
-                    totalValue: { $sum: '$totalProjectAmount' },
-                    totalPaid: { $sum: '$totalPaid' },
-                    totalDue: { $sum: '$totalDue' },
-                },
-            },
-        ]);
+        // ডোমেইনের অংশ বাদ দিয়ে শুধু ওয়েবসাইটের টাকা (getSummary এর সাথে একই হিসাব)
+        const allProjects = await this.getProjects();
+        const monthBucket = new Map<string, any>();
+        allProjects.forEach((x: any) => {
+            if (!x.orderDate) return;
+            const key = new Date(x.orderDate).toISOString().slice(0, 7);
+            const b = monthBucket.get(key) || { _id: key, projectCount: 0, totalValue: 0, totalPaid: 0, totalDue: 0 };
+            b.projectCount += 1;
+            b.totalValue += x.websiteAmount ?? x.totalProjectAmount ?? 0;
+            b.totalPaid += x.websitePaid ?? x.totalPaid ?? 0;
+            b.totalDue += x.websiteDue ?? x.totalDue ?? 0;
+            monthBucket.set(key, b);
+        });
+        const projectMonths = Array.from(monthBucket.values());
 
         const expenseMonths = await Expense.aggregate([
             { $match: { costDate: { $ne: null } } },
@@ -872,18 +874,6 @@ const ProjectTrackerService = {
             },
         ]);
         const expenseMap = new Map(expenseMonths.map((e) => [e._id, e.totalExpenses]));
-
-        // Domain/Hosting profit per month (purchaseDate অনুযায়ী)
-        const domainMonths = await Domain.aggregate([
-            { $match: { purchaseDate: { $ne: null } } },
-            {
-                $group: {
-                    _id: { $dateToString: { format: '%Y-%m', date: '$purchaseDate' } },
-                    domainProfit: { $sum: '$profit' },
-                },
-            },
-        ]);
-        const domainMap = new Map(domainMonths.map((d) => [d._id, d.domainProfit]));
 
         const seen = new Set(projectMonths.map((m) => m._id));
         const extra = expenseMonths
@@ -898,8 +888,8 @@ const ProjectTrackerService = {
                 totalPaid: m.totalPaid,
                 totalDue: m.totalDue,
                 totalExpenses: expenseMap.get(m._id) || 0,
-                // Total Profit = Collection + Domain/Hosting Profit - Expenses
-                totalProfit: (m.totalPaid || 0) + (domainMap.get(m._id) || 0) - (expenseMap.get(m._id) || 0),
+                // Total Profit = ওয়েবসাইটের Collection - Expenses (ডোমেইন/হোস্টিং আলাদা ট্যাবে)
+                totalProfit: (m.totalPaid || 0) - (expenseMap.get(m._id) || 0),
             }))
             .sort((a, b) => b.monthKey.localeCompare(a.monthKey));
     },
@@ -926,26 +916,17 @@ const ProjectTrackerService = {
             : allExpenses;
         const totalExpenses = monthExpenses.reduce((s, e) => s + (e.amount || 0), 0);
 
-        // Domain/Hosting profit — registry থেকে, ওই মাসের (purchaseDate অনুযায়ী)
-        const allDomains = await Domain.find();
-        const monthDomains = month
-            ? allDomains.filter(
-                  (d) => d.purchaseDate && new Date(d.purchaseDate).toISOString().slice(0, 7) === month
-              )
-            : allDomains;
-        // billing অনুযায়ী — included হলে sell আগেই collection এ আছে, শুধু খরচ বাদ যায়
-        const domainProfit = monthDomains.reduce((s, d) => s + domainRevenueImpact(d), 0);
+        // Total Profit = ওয়েবসাইট থেকে যা কালেকশন হয়েছে (ডিউ আগেই বাদ) - Expenses
+        // ডোমেইন/হোস্টিং এখানে নেই — ওটার লাভ Domain/Hosting ট্যাবে আলাদা দেখা যায়
+        const websiteProfit = p.totalCollection - totalExpenses;
 
         return {
             month: month || 'all',
             projectCount: projects.length,
             ...p,
-            domainProfit,
             totalExpenses,
-            // শুধু ওয়েবসাইট থেকে — যা উঠেছে বাদ যা খরচ হয়েছে (ডোমেইন/হোস্টিং এখানে নেই)
-            websiteProfit: p.totalCollection - totalExpenses,
-            // Total Profit = Collection + Domain/Hosting এর net impact (registry) - Expenses
-            totalProfit: p.totalCollection + domainProfit - totalExpenses,
+            websiteProfit,
+            totalProfit: websiteProfit,
             pendingRequests: await ProjectClient.countDocuments({ status: 'request' }),
         };
     },
