@@ -137,6 +137,26 @@ export interface IExpense {
     updatedAt?: Date;
 }
 
+// রিনিউয়ের ইতিহাস — প্রতিবার মেয়াদ বাড়ালে একটা এন্ট্রি (কবে, কতদিন, কত খরচ, কত দাম)
+export interface IDomainRenewal {
+    date: Date;
+    fromExpiry?: Date; // রিনিউয়ের আগের মেয়াদ (শেষ রিনিউ মুছলে এটাই ফিরে আসে)
+    toExpiry?: Date;
+    months: number;
+    buyPrice: number;
+    sellPrice: number;
+    note?: string;
+}
+
+// ক্লায়েন্টের কাছ থেকে পাওয়া পেমেন্টের খাতা (clientPaid = মোট পাওয়া)
+export interface IDomainPayment {
+    date: Date;
+    amount: number;
+    method?: string;
+    note?: string;
+    kind?: 'payment' | 'renewal';
+}
+
 // Domain / Hosting registry — কোন ডোমেইন, মালিক, কোন প্রজেক্টে যুক্ত, কেনা/বেচা/লাভ
 export interface IDomain {
     _id?: Types.ObjectId;
@@ -158,6 +178,19 @@ export interface IDomain {
     purchaseDate?: Date;
     expiryDate?: Date;
     note?: string;
+    // ---- Domain & Hosting মেনুর ফিল্ড ----
+    ownerPhone?: string;
+    ownerEmail?: string;
+    hostingPlan?: string; // হোস্টিং প্ল্যান / সার্ভারের নাম
+    status?: 'active' | 'suspended' | 'cancelled';
+    autoRenew?: boolean;
+    cycleMonths?: number; // সাধারণত ১২
+    renewalSellPrice?: number; // পরের রিনিউয়ে ক্লায়েন্টের কাছ থেকে নেওয়ার দাম
+    renewalBuyPrice?: number; // পরের রিনিউয়ে আমাদের খরচ
+    nextPaymentDate?: Date; // ক্লায়েন্টের পেমেন্ট দেওয়ার তারিখ (না থাকলে মেয়াদ শেষের তারিখ ধরা হয়)
+    lastReminderAt?: Date;
+    renewals?: IDomainRenewal[];
+    payments?: IDomainPayment[];
     createdAt?: Date;
     updatedAt?: Date;
 }
@@ -302,6 +335,29 @@ const expenseSchema = new Schema<IExpense>(
 
 export const Expense = model<IExpense>('Expense', expenseSchema, 'expenses');
 
+const domainRenewalSchema = new Schema<IDomainRenewal>(
+    {
+        date: { type: Date, default: Date.now },
+        fromExpiry: { type: Date },
+        toExpiry: { type: Date },
+        months: { type: Number, default: 12 },
+        buyPrice: { type: Number, default: 0 },
+        sellPrice: { type: Number, default: 0 },
+        note: { type: String },
+    },
+    { _id: true }
+);
+const domainPaymentSchema = new Schema<IDomainPayment>(
+    {
+        date: { type: Date, default: Date.now },
+        amount: { type: Number, default: 0 },
+        method: { type: String },
+        note: { type: String },
+        kind: { type: String, enum: ['payment', 'renewal'], default: 'payment' },
+    },
+    { _id: true }
+);
+
 // Domain model — নিজস্ব 'domains' collection (course collections ডিলিট করায় slot খালি হয়েছে)
 const domainSchema = new Schema<IDomain>(
     {
@@ -322,6 +378,18 @@ const domainSchema = new Schema<IDomain>(
         purchaseDate: { type: Date },
         expiryDate: { type: Date },
         note: { type: String },
+        ownerPhone: { type: String, trim: true },
+        ownerEmail: { type: String, trim: true, lowercase: true },
+        hostingPlan: { type: String, trim: true },
+        status: { type: String, enum: ['active', 'suspended', 'cancelled'], default: 'active' },
+        autoRenew: { type: Boolean, default: false },
+        cycleMonths: { type: Number, default: 12 },
+        renewalSellPrice: { type: Number },
+        renewalBuyPrice: { type: Number },
+        nextPaymentDate: { type: Date },
+        lastReminderAt: { type: Date },
+        renewals: { type: [domainRenewalSchema], default: [] },
+        payments: { type: [domainPaymentSchema], default: [] },
     },
     { timestamps: true }
 );
@@ -661,9 +729,17 @@ const ProjectTrackerService = {
             note: d.note || undefined,
         };
 
-        // একই project এ বারবার confirm/edit করলে যেন duplicate না হয়
-        const existing = await Domain.findOne({ linkedProjectId: projectId, fromProject: true });
+        // একই project এ বারবার confirm/edit করলে যেন duplicate না হয়।
+        // Domain & Hosting মেনু থেকে হাতে যোগ করা রেকর্ড থাকলে সেটাই আপডেট হয় (নতুন কপি তৈরি হয় না),
+        // আর সেই রেকর্ডের "প্রজেক্ট থেকে auto" চিহ্ন বদলায় না।
+        let existing: any = await Domain.findOne({ linkedProjectId: projectId, fromProject: true });
+        if (!existing) {
+            existing = await Domain.findOne({ linkedProjectId: projectId });
+            if (existing) delete fields.fromProject;
+        }
         if (existing) {
+            // ফর্মে মেয়াদ ফাঁকা থাকলে রিনিউ করা মেয়াদ মুছে ফেলা হবে না
+            if (fields.expiryDate === undefined) delete fields.expiryDate;
             Object.assign(existing, fields);
             await existing.save(); // pre-save: profit auto
             return existing;
@@ -1007,14 +1083,28 @@ const ProjectTrackerService = {
 
     async getDomainSummary(month?: string) {
         const domains = await this.getDomains(month);
-        return domains.reduce(
+        // এই মাসে হওয়া রিনিউ (রিনিউয়ের তারিখ অনুযায়ী — কেনার মাস যা-ই হোক)
+        const everyone: any[] = await Domain.find().select('renewals').lean();
+        const ren = { renewalCount: 0, renewalRevenue: 0, renewalCost: 0, renewalProfit: 0 };
+        everyone.forEach((d) =>
+            (d.renewals || []).forEach((r: any) => {
+                if (!r.date) return;
+                if (month && new Date(r.date).toISOString().slice(0, 7) !== month) return;
+                ren.renewalCount += 1;
+                ren.renewalRevenue += r.sellPrice || 0;
+                ren.renewalCost += r.buyPrice || 0;
+                ren.renewalProfit += (r.sellPrice || 0) - (r.buyPrice || 0);
+            })
+        );
+        const base = domains.reduce(
             (acc, d) => {
                 acc.count += 1;
                 acc.totalBuy += d.buyPrice || 0;
                 acc.totalSell += d.sellPrice || 0;
                 acc.totalProfit += d.profit || 0; // raw sell - buy (billing নির্বিশেষে)
                 acc.totalClientPaid += d.clientPaid || 0;
-                acc.totalDue += Math.max(0, (d.sellPrice || 0) - (d.clientPaid || 0));
+                const renewSell = (d.renewals || []).reduce((x: number, r: any) => x + (r.sellPrice || 0), 0);
+                acc.totalDue += Math.max(0, (d.sellPrice || 0) + renewSell - (d.clientPaid || 0));
                 acc.revenueImpact += domainRevenueImpact(d); // মাসের লাভে আসল অবদান
                 if (d.billing === 'included') acc.includedCount += 1;
                 return acc;
@@ -1024,6 +1114,7 @@ const ProjectTrackerService = {
                 totalClientPaid: 0, totalDue: 0, revenueImpact: 0, includedCount: 0,
             }
         );
+        return { ...base, ...ren };
     },
 
     async createDomain(payload: any) {

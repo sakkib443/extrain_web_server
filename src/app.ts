@@ -38,6 +38,7 @@ import { BlogRoutes } from './app/modules/blog/blog.routes';
 import { CustomizationRoutes } from './app/modules/customization/customization.module';
 import { TestimonialRoutes } from './app/modules/testimonial/testimonial.routes';
 import { ProjectTrackerRoutes } from './app/modules/projectTracker/projectTracker.module';
+import { DomainHostingRoutes } from './app/modules/domainHosting/domainHosting.module';
 
 // ==================== App Initialization ====================
 const app: Application = express();
@@ -199,6 +200,9 @@ app.use('/api/testimonials', TestimonialRoutes);
 
 // Project Tracker routes (custom project orders + monthly accounting)
 app.use('/api/project-tracker', ProjectTrackerRoutes);
+
+// Domain & Hosting registry (domain / hosting sales, renewals, dues)
+app.use('/api/domain-hosting', DomainHostingRoutes);
 
 // ==================== Error Handling ====================
 // 404 Not Found handler (must be after all routes)
