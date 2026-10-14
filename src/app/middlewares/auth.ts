@@ -19,7 +19,7 @@ declare global {
       user?: JwtPayload & {
         userId: string;
         email: string;
-        role: 'admin' | 'mentor' | 'student';
+        role: 'admin' | 'mentor' | 'student' | 'editor';
       };
     }
   }
@@ -58,7 +58,7 @@ export const authMiddleware = async (
     const decoded = jwt.verify(token, config.jwt.access_secret) as JwtPayload & {
       userId: string;
       email: string;
-      role: 'admin' | 'mentor' | 'student';
+      role: 'admin' | 'mentor' | 'student' | 'editor';
     };
 
     // ==================== 3. Check if User Exists ====================
@@ -79,7 +79,9 @@ export const authMiddleware = async (
 
     // ==================== 4. Attach User to Request ====================
     // Request object এ user data attach করা যাতে controller থেকে access করা যায়
-    req.user = decoded;
+    // The role comes from the database, not from the token: tokens never expire, so a role that was
+    // taken away (admin -> editor) must stop working immediately, not when the person next logs in.
+    req.user = { ...decoded, role: user.role };
 
     next();
   } catch (error) {
@@ -94,7 +96,7 @@ export const authMiddleware = async (
  * @example
  * router.delete('/user/:id', authMiddleware, authorizeRoles('admin'), UserController.delete);
  */
-export const authorizeRoles = (...allowedRoles: ('admin' | 'mentor' | 'student')[]) => {
+export const authorizeRoles = (...allowedRoles: ('admin' | 'mentor' | 'student' | 'editor')[]) => {
   return (req: Request, res: Response, next: NextFunction): void => {
     // User এর role allowed list এ আছে কিনা check করা
     if (!req.user || !allowedRoles.includes(req.user.role)) {

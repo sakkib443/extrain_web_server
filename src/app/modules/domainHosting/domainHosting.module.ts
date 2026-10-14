@@ -19,6 +19,7 @@ import sendResponse from '../../utils/sendResponse';
 import AppError from '../../utils/AppError';
 import { authMiddleware, authorizeRoles } from '../../middlewares/auth';
 import { Domain, ProjectClient } from '../projectTracker/projectTracker.module';
+import { isEditor, editorDomain, editorDomainBody, editorRenewBody } from '../editorAccess/editorAccess';
 
 // ==================== HELPERS ====================
 const TYPES = ['domain', 'hosting', 'both'];
@@ -303,35 +304,59 @@ const DomainHostingService = {
 const ok = (res: any, data: any, message: string, statusCode = 200) =>
     sendResponse(res, { statusCode, success: true, message, data });
 
+// An editor (see modules/editorAccess) never receives a price or a payment, and can never send one.
 const C = {
-    list: catchAsync(async (_req, res) => ok(res, await DomainHostingService.list(), 'Domain & hosting list')),
+    list: catchAsync(async (req, res) => {
+        const data = await DomainHostingService.list();
+        ok(res, isEditor(req) ? data.map(editorDomain) : data, 'Domain & hosting list');
+    }),
     projectsLite: catchAsync(async (_req, res) => ok(res, await DomainHostingService.projectsLite(), 'Projects')),
-    create: catchAsync(async (req, res) => ok(res, await DomainHostingService.create(req.body), 'Added', 201)),
-    update: catchAsync(async (req, res) => ok(res, await DomainHostingService.update(req.params.id, req.body), 'Updated')),
+    create: catchAsync(async (req, res) => {
+        const editor = isEditor(req);
+        const data = await DomainHostingService.create(editor ? editorDomainBody(req.body) : req.body);
+        ok(res, editor ? editorDomain(data) : data, 'Added', 201);
+    }),
+    update: catchAsync(async (req, res) => {
+        const editor = isEditor(req);
+        const data = await DomainHostingService.update(req.params.id, editor ? editorDomainBody(req.body) : req.body);
+        ok(res, editor ? editorDomain(data) : data, 'Updated');
+    }),
     remove: catchAsync(async (req, res) => ok(res, await DomainHostingService.remove(req.params.id), 'Deleted')),
-    renew: catchAsync(async (req, res) => ok(res, await DomainHostingService.renew(req.params.id, req.body), 'Renewed')),
+    renew: catchAsync(async (req, res) => {
+        const editor = isEditor(req);
+        const data = await DomainHostingService.renew(req.params.id, editor ? editorRenewBody(req.body) : req.body);
+        ok(res, editor ? editorDomain(data) : data, 'Renewed');
+    }),
     removeRenewal: catchAsync(async (req, res) =>
         ok(res, await DomainHostingService.removeRenewal(req.params.id, req.params.rid), 'Renewal removed')),
     addPayment: catchAsync(async (req, res) => ok(res, await DomainHostingService.addPayment(req.params.id, req.body), 'Payment added')),
     removePayment: catchAsync(async (req, res) =>
         ok(res, await DomainHostingService.removePayment(req.params.id, req.params.pid), 'Payment removed')),
-    markReminded: catchAsync(async (req, res) => ok(res, await DomainHostingService.markReminded(req.params.id), 'Marked')),
+    markReminded: catchAsync(async (req, res) => {
+        const data = await DomainHostingService.markReminded(req.params.id);
+        ok(res, isEditor(req) ? editorDomain(data) : data, 'Marked');
+    }),
 };
 
-// ==================== ROUTES (admin only) ====================
+// ==================== ROUTES ====================
 const router = express.Router();
-router.use(authMiddleware, authorizeRoles('admin'));
+router.use(authMiddleware);
 
-router.get('/', C.list);
-router.get('/projects', C.projectsLite);
-router.post('/', C.create);
-router.patch('/:id', C.update);
+// admin + editor
+const staff = authorizeRoles('admin', 'editor');
+router.get('/', staff, C.list);
+router.get('/projects', staff, C.projectsLite);
+router.post('/', staff, C.create);
+router.patch('/:id', staff, C.update);
+router.post('/:id/renew', staff, C.renew);
+router.post('/:id/reminded', staff, C.markReminded);
+
+// admin only — everything registered below this line (default deny): deleting and anything that touches money
+router.use(authorizeRoles('admin'));
 router.delete('/:id', C.remove);
-router.post('/:id/renew', C.renew);
 router.delete('/:id/renewals/:rid', C.removeRenewal);
 router.post('/:id/payments', C.addPayment);
 router.delete('/:id/payments/:pid', C.removePayment);
-router.post('/:id/reminded', C.markReminded);
 
 export const DomainHostingRoutes = router;
 export default DomainHostingService;

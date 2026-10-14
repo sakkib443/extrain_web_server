@@ -158,9 +158,17 @@ const UserService = {
    * User নিজে নিজের profile update করবে
    */
   async updateProfile(userId: string, payload: TUpdateUserInput): Promise<IUser> {
+    // Only these four fields. The request body is not stripped by validation, so "$set: payload" used to let any
+    // logged-in user send {"role": "admin"} (or "editor") to their own profile and promote themselves.
+    const allowed = ['firstName', 'lastName', 'phone', 'avatar'] as const;
+    const safe: Record<string, unknown> = {};
+    for (const key of allowed) {
+      if ((payload as any)?.[key] !== undefined) safe[key] = (payload as any)[key];
+    }
+
     const user = await User.findByIdAndUpdate(
       userId,
-      { $set: payload },
+      { $set: safe },
       { new: true, runValidators: true }
     );
 

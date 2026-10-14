@@ -31,6 +31,7 @@ import { NotificationService } from '../notification/notification.module';
 import { User } from '../user/user.model';
 import AuthService from '../auth/auth.service';
 import EmailService from '../email/email.service';
+import { isEditor, editorProject, editorProjects, editorMonths, editorProjectBody } from '../editorAccess/editorAccess';
 
 // ==================== INTERFACES ====================
 export interface IInstallment {
@@ -718,11 +719,13 @@ const ProjectTrackerService = {
             owner: d.owner || project.clientName,
             linkedProjectId: projectId,
             linkedClientName: `${project.clientName}${project.companyBrand ? ` (${project.companyBrand})` : ''}`,
-            billing: d.billing === 'included' ? 'included' : 'separate',
             fromProject: true,
-            buyPrice: Number(d.buyPrice) || 0,
-            sellPrice: Number(d.sellPrice) || 0,
-            clientPaid: Number(d.clientPaid) || 0,
+            // money / billing are written only when the form actually sent them — an editor's form has none,
+            // so saving a project as an editor can never reset a price to 0
+            ...(d.billing !== undefined ? { billing: d.billing === 'included' ? 'included' : 'separate' } : {}),
+            ...(d.buyPrice !== undefined ? { buyPrice: Number(d.buyPrice) || 0 } : {}),
+            ...(d.sellPrice !== undefined ? { sellPrice: Number(d.sellPrice) || 0 } : {}),
+            ...(d.clientPaid !== undefined ? { clientPaid: Number(d.clientPaid) || 0 } : {}),
             provider: d.provider || undefined,
             purchaseDate: d.purchaseDate ? new Date(d.purchaseDate) : project.orderDate || new Date(),
             expiryDate: d.expiryDate ? new Date(d.expiryDate) : undefined,
@@ -1163,34 +1166,36 @@ const C = {
     }),
     getRequests: catchAsync(async (req, res) => {
         const data = await ProjectTrackerService.getRequests();
-        sendResponse(res, { statusCode: 200, success: true, message: 'Requests fetched', data });
+        sendResponse(res, { statusCode: 200, success: true, message: 'Requests fetched', data: isEditor(req) ? editorProjects(data) : data });
     }),
     approveRequest: catchAsync(async (req, res) => {
         const data = await ProjectTrackerService.setRequestStatus(req.params.id, true);
-        sendResponse(res, { statusCode: 200, success: true, message: 'Request approved', data });
+        sendResponse(res, { statusCode: 200, success: true, message: 'Request approved', data: isEditor(req) ? editorProject(data) : data });
     }),
     rejectRequest: catchAsync(async (req, res) => {
         const data = await ProjectTrackerService.setRequestStatus(req.params.id, false);
-        sendResponse(res, { statusCode: 200, success: true, message: 'Request rejected', data });
+        sendResponse(res, { statusCode: 200, success: true, message: 'Request rejected', data: isEditor(req) ? editorProject(data) : data });
     }),
     confirmRequest: catchAsync(async (req, res) => {
         const data = await ProjectTrackerService.confirmRequest(req.params.id, req.body);
         sendResponse(res, { statusCode: 200, success: true, message: 'Order confirmed', data });
     }),
     createProject: catchAsync(async (req, res) => {
-        const data = await ProjectTrackerService.createProject(req.body);
-        sendResponse(res, { statusCode: 201, success: true, message: 'Project created', data });
+        const editor = isEditor(req);
+        const data = await ProjectTrackerService.createProject(editor ? editorProjectBody(req.body) : req.body);
+        sendResponse(res, { statusCode: 201, success: true, message: 'Project created', data: editor ? editorProject(data) : data });
     }),
     getProjects: catchAsync(async (req, res) => {
         const data = await ProjectTrackerService.getProjects(
             req.query.month as string,
             req.query.status as string
         );
-        sendResponse(res, { statusCode: 200, success: true, message: 'Projects fetched', data });
+        sendResponse(res, { statusCode: 200, success: true, message: 'Projects fetched', data: isEditor(req) ? editorProjects(data) : data });
     }),
     updateProject: catchAsync(async (req, res) => {
-        const data = await ProjectTrackerService.updateProject(req.params.id, req.body);
-        sendResponse(res, { statusCode: 200, success: true, message: 'Project updated', data });
+        const editor = isEditor(req);
+        const data = await ProjectTrackerService.updateProject(req.params.id, editor ? editorProjectBody(req.body) : req.body);
+        sendResponse(res, { statusCode: 200, success: true, message: 'Project updated', data: editor ? editorProject(data) : data });
     }),
     updateSheetFields: catchAsync(async (req, res) => {
         const data = await ProjectTrackerService.updateSheetFields(req.params.id, req.body);
@@ -1215,7 +1220,7 @@ const C = {
     }),
     getMonths: catchAsync(async (req, res) => {
         const data = await ProjectTrackerService.getMonths();
-        sendResponse(res, { statusCode: 200, success: true, message: 'Months fetched', data });
+        sendResponse(res, { statusCode: 200, success: true, message: 'Months fetched', data: isEditor(req) ? editorMonths(data) : data });
     }),
     getSummary: catchAsync(async (req, res) => {
         const data = await ProjectTrackerService.getSummary(req.query.month as string);
@@ -1273,22 +1278,27 @@ router.post('/request', validateRequest(clientRequestValidation), C.createReques
 // ---------- USER (authenticated, নিজের receipt) ----------
 router.get('/my-receipts', authMiddleware, C.getMyReceipts);
 
-// ---------- ADMIN ONLY ----------
-router.use(authMiddleware, authorizeRoles('admin'));
+// ---------- ADMIN + EDITOR (an editor gets the money-free view; see modules/editorAccess) ----------
+router.use(authMiddleware);
+const staff = authorizeRoles('admin', 'editor');
 
-router.get('/admin/requests', C.getRequests);
-router.patch('/admin/requests/:id/approve', C.approveRequest);
-router.patch('/admin/requests/:id/reject', C.rejectRequest);
-router.patch('/admin/requests/:id/confirm', C.confirmRequest);
+router.get('/admin/requests', staff, C.getRequests);
+router.patch('/admin/requests/:id/approve', staff, C.approveRequest);
+router.patch('/admin/requests/:id/reject', staff, C.rejectRequest);
 
-router.get('/admin/months', C.getMonths);
+router.get('/admin/months', staff, C.getMonths);
+
+router.get('/admin/projects', staff, C.getProjects);
+router.post('/admin/projects', staff, C.createProject);
+router.patch('/admin/projects/:id', staff, C.updateProject);
+router.patch('/admin/projects/:id/sheet', staff, C.updateSheetFields);
+
+// ---------- ADMIN ONLY — everything registered below this line (default deny) ----------
+router.use(authorizeRoles('admin'));
+
+router.patch('/admin/requests/:id/confirm', C.confirmRequest); // sets the price
 router.get('/admin/summary', C.getSummary);
 router.get('/admin/daily-stats', C.getDailyStats);
-
-router.get('/admin/projects', C.getProjects);
-router.post('/admin/projects', C.createProject);
-router.patch('/admin/projects/:id', C.updateProject);
-router.patch('/admin/projects/:id/sheet', C.updateSheetFields);
 router.delete('/admin/projects/:id', C.deleteProject);
 router.post('/admin/projects/:id/send-receipt', C.sendReceipt);
 

@@ -113,7 +113,7 @@ const userSchema = new Schema<IUser, UserModel, IUserMethods>(
     role: {
       type: String,
       enum: {
-        values: ['admin', 'mentor', 'student'],
+        values: ['admin', 'mentor', 'student', 'editor'],
         message: '{VALUE} is not a valid role',
       },
       default: 'student',

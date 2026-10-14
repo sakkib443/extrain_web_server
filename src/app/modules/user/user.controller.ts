@@ -15,6 +15,22 @@ import { IUserFilters } from './user.interface';
 // ===================================================================
 
 const UserController = {
+  // ==================== CREATE USER (ADMIN) ====================
+  /**
+   * POST /api/users/admin
+   * Admin যেকোনো role (admin / editor / mentor / student) এর user তৈরি করে
+   */
+  createUserByAdmin: catchAsync(async (req: Request, res: Response) => {
+    const user = await UserService.createUser({ ...req.body, status: 'active', isEmailVerified: true });
+
+    sendResponse(res, {
+      statusCode: 201,
+      success: true,
+      message: 'User created successfully',
+      data: user,
+    });
+  }),
+
   // ==================== GET CURRENT USER PROFILE ====================
   /**
    * GET /api/users/me
