@@ -48,7 +48,25 @@ export const createUserValidation = z.object({
 
     avatar: z.string().url('Avatar must be a valid URL').optional(),
 
-    role: z.enum(['admin', 'mentor', 'student']).optional().default('student'),
+    role: z.enum(['admin', 'mentor', 'student', 'editor']).optional().default('student'),
+  }),
+});
+
+/**
+ * Admin Create User Validation Schema
+ * Admin ড্যাশবোর্ড থেকে যেকোনো role-এর user তৈরি (POST /api/users/admin) — শুধু admin এটা চালাতে পারে
+ */
+export const adminCreateUserValidation = z.object({
+  body: z.object({
+    email: z.string({ required_error: 'Email is required' }).email('Please provide a valid email'),
+    password: z
+      .string({ required_error: 'Password is required' })
+      .min(6, 'Password must be at least 6 characters')
+      .max(50, 'Password cannot exceed 50 characters'),
+    firstName: z.string({ required_error: 'First name is required' }).min(1, 'First name is required').max(50),
+    lastName: z.string({ required_error: 'Last name is required' }).min(1, 'Last name is required').max(50),
+    phone: z.string().optional(),
+    role: z.enum(['admin', 'mentor', 'student', 'editor']).optional().default('student'),
   }),
 });
 
@@ -89,7 +107,7 @@ export const adminUpdateUserValidation = z.object({
   body: z.object({
     firstName: z.string().max(50).optional(),
     lastName: z.string().max(50).optional(),
-    role: z.enum(['admin', 'mentor', 'student']).optional(),
+    role: z.enum(['admin', 'mentor', 'student', 'editor']).optional(),
     status: z.enum(['active', 'blocked', 'pending']).optional(),
     isEmailVerified: z.boolean().optional(),
   }),
@@ -138,7 +156,7 @@ export const userQueryValidation = z.object({
     page: z.string().optional(),
     limit: z.string().optional(),
     searchTerm: z.string().optional(),
-    role: z.enum(['admin', 'mentor', 'student']).optional(),
+    role: z.enum(['admin', 'mentor', 'student', 'editor']).optional(),
     status: z.enum(['active', 'blocked', 'pending']).optional(),
     sortBy: z.string().optional(),
     sortOrder: z.enum(['asc', 'desc']).optional(),

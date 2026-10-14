@@ -12,6 +12,7 @@ import {
     changePasswordValidation,
     adminUpdateUserValidation,
     userQueryValidation,
+    adminCreateUserValidation,
 } from './user.validation';
 
 const router = express.Router();
@@ -65,6 +66,18 @@ router.get(
     authMiddleware,
     authorizeRoles('admin'),
     UserController.getUserStats
+);
+
+/**
+ * POST /api/users/admin
+ * Create a user with any role (admin only) — public /auth/register can only create students
+ */
+router.post(
+    '/admin',
+    authMiddleware,
+    authorizeRoles('admin'),
+    validateRequest(adminCreateUserValidation),
+    UserController.createUserByAdmin
 );
 
 /**

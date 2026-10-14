@@ -11,7 +11,7 @@ import { Model, Types } from 'mongoose';
  * mentor - Limited admin access (create/update only, no delete, no analytics)
  * student - Registered customer / regular user (default self-registration role)
  */
-export type TUserRole = 'admin' | 'mentor' | 'student';
+export type TUserRole = 'admin' | 'mentor' | 'student' | 'editor';
 
 /**
  * User Status Types
