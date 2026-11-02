@@ -10,10 +10,16 @@ import CategoryService from './category.service';
 import pick from '../../utils/pick';
 import { ICategoryFilters } from './category.interface';
 
+// productCount is kept by the server (a category with products cannot be deleted) — only an admin may set it by hand
+const withoutCount = (body: any) => {
+    const { productCount, ...rest } = body || {};
+    return rest;
+};
+
 const CategoryController = {
     // ==================== CREATE (Admin) ====================
     createCategory: catchAsync(async (req: Request, res: Response) => {
-        const category = await CategoryService.createCategory(req.body);
+        const category = await CategoryService.createCategory(req.user?.role === 'admin' ? req.body : withoutCount(req.body));
 
         sendResponse(res, {
             statusCode: 201,
@@ -114,7 +120,7 @@ const CategoryController = {
 
     // ==================== UPDATE (Admin) ====================
     updateCategory: catchAsync(async (req: Request, res: Response) => {
-        const category = await CategoryService.updateCategory(req.params.id, req.body);
+        const category = await CategoryService.updateCategory(req.params.id, req.user?.role === 'admin' ? req.body : withoutCount(req.body));
 
         sendResponse(res, {
             statusCode: 200,

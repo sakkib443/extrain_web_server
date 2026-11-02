@@ -11,10 +11,19 @@ import pick from '../../utils/pick';
 import { IWebsiteFilters, IWebsiteQuery } from './website.interface';
 import AppError from '../../utils/AppError';
 
+// Only an admin may delete a website (isDeleted) or touch the counters a buyer sees (rating, sales, views, likes).
+// The request body is not stripped by validation, so these are removed here for everyone else (mentor, editor).
+const ADMIN_ONLY_FIELDS = ['isDeleted', 'rating', 'reviewCount', 'salesCount', 'viewCount', 'likeCount', 'likedBy'];
+const withoutAdminFields = (body: any) => {
+    const out = { ...(body || {}) };
+    ADMIN_ONLY_FIELDS.forEach((k) => delete out[k]);
+    return out;
+};
+
 const WebsiteController = {
     // ==================== CREATE (Admin) ====================
     createWebsite: catchAsync(async (req: Request, res: Response) => {
-        const website = await WebsiteService.createWebsite(req.body);
+        const website = await WebsiteService.createWebsite(req.user?.role === 'admin' ? req.body : withoutAdminFields(req.body));
 
         sendResponse(res, {
             statusCode: 201,
@@ -126,7 +135,7 @@ const WebsiteController = {
         const isAdmin = req.user!.role === 'admin';
         const website = await WebsiteService.updateWebsite(
             req.params.id,
-            req.body,
+            isAdmin ? req.body : withoutAdminFields(req.body),
             isAdmin
         );
 

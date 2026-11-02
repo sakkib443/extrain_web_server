@@ -22,12 +22,13 @@ const WebsiteService = {
     // ==================== CREATE WEBSITE ====================
     async createWebsite(payload: Partial<IWebsite>): Promise<IWebsite> {
         // Generate slug if not provided
+        // (a Bengali title has no a-z letters, so it falls back to "website")
         if (!payload.slug) {
-            payload.slug = payload.title!
+            const base = (payload.title || '')
                 .toLowerCase()
                 .replace(/[^a-z0-9]+/g, '-')
-                .replace(/(^-|-$)/g, '')
-                + '-' + Date.now();
+                .replace(/(^-|-$)/g, '');
+            payload.slug = `${base || 'website'}-${Date.now()}`;
         }
 
         // Check slug uniqueness

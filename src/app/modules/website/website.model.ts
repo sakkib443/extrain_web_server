@@ -25,7 +25,7 @@ const websiteSchema = new Schema<IWebsite>(
         platform: {
             type: String,
             enum: PLATFORM_OPTIONS,
-            required: [true, 'Platform is required'],
+            default: 'Other',
         },
         category: {
             type: Schema.Types.ObjectId,
@@ -44,7 +44,7 @@ const websiteSchema = new Schema<IWebsite>(
         // ==================== Pricing ====================
         price: {
             type: Number,
-            required: [true, 'Price is required'],
+            default: 0,
             min: [0, 'Price cannot be negative'],
         },
         offerPrice: {
@@ -71,7 +71,7 @@ const websiteSchema = new Schema<IWebsite>(
         technologies: [{ type: String }],
         description: {
             type: String,
-            required: [true, 'Description is required'],
+            default: '',
             maxlength: [1000, 'Description cannot exceed 1000 characters'],
         },
         longDescription: { type: String },
@@ -82,7 +82,7 @@ const websiteSchema = new Schema<IWebsite>(
         videoUrl: { type: String },  // YouTube video URL
         downloadFile: {
             type: String,
-            required: [true, 'Download file is required'],
+            default: '',
         },
 
         // ==================== Status ====================

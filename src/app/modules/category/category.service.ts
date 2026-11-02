@@ -11,18 +11,24 @@ import { TCreateCategoryInput, TUpdateCategoryInput } from './category.validatio
 const CategoryService = {
     // ==================== CREATE CATEGORY ====================
     async createCategory(payload: TCreateCategoryInput): Promise<ICategory> {
-        // Generate slug if not provided
+        // Generate slug if not provided — made unique by adding -2, -3 … (a Bengali name has no a-z letters, so it
+        // falls back to "category"). A slug typed by hand that is already taken is still an error.
         if (!payload.slug) {
-            payload.slug = payload.name
+            const base = payload.name
                 .toLowerCase()
                 .replace(/[^a-z0-9]+/g, '-')
-                .replace(/(^-|-$)/g, '');
+                .replace(/(^-|-$)/g, '') || 'category';
+            let slug = base;
+            for (let i = 2; await Category.exists({ slug }); i++) slug = `${base}-${i}`;
+            payload.slug = slug;
+        } else if (await Category.findOne({ slug: payload.slug })) {
+            throw new AppError(400, 'Category with this slug already exists');
         }
 
-        // Check if slug exists
-        const existing = await Category.findOne({ slug: payload.slug });
-        if (existing) {
-            throw new AppError(400, 'Category with this slug already exists');
+        // no parent = a main (parent) category
+        if (!payload.parentCategory) {
+            payload.parentCategory = null;
+            payload.isParent = true;
         }
 
         const category = await Category.create(payload);

@@ -36,7 +36,7 @@ router.get('/slug/:slug', optionalAuth, WebsiteController.getWebsiteBySlug);
 router.get(
     '/admin/all-list',
     authMiddleware,
-    authorizeRoles('admin', 'mentor'),
+    authorizeRoles('admin', 'mentor', 'editor'),
     WebsiteController.getAdminAllWebsites
 );
 
@@ -44,7 +44,7 @@ router.get(
 router.post(
     '/admin',
     authMiddleware,
-    authorizeRoles('admin', 'mentor'),
+    authorizeRoles('admin', 'mentor', 'editor'),
     validateRequest(createWebsiteValidation),
     WebsiteController.createWebsite
 );
@@ -53,7 +53,7 @@ router.post(
 router.patch(
     '/admin/managed/:id',
     authMiddleware,
-    authorizeRoles('admin', 'mentor'),
+    authorizeRoles('admin', 'mentor', 'editor'),
     validateRequest(updateWebsiteValidation),
     WebsiteController.updateWebsite
 );
@@ -74,7 +74,7 @@ router.delete(
 router.get(
     '/admin/all',
     authMiddleware,
-    authorizeRoles('admin', 'mentor'),
+    authorizeRoles('admin', 'mentor', 'editor'),
     WebsiteController.getAdminWebsites
 );
 
@@ -82,7 +82,7 @@ router.get(
 router.patch(
     '/admin/:id/status',
     authMiddleware,
-    authorizeRoles('admin', 'mentor'),
+    authorizeRoles('admin', 'mentor', 'editor'),
     WebsiteController.updateWebsiteStatus
 );
 
