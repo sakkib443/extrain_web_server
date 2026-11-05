@@ -5,6 +5,9 @@
 
 import express from 'express';
 import { PageContentController } from './pageContent.controller';
+import { PageContentValidation } from './pageContent.validation';
+import validateRequest from '../../middlewares/validateRequest';
+import { authMiddleware, authorizeRoles } from '../../middlewares/auth';
 
 const router = express.Router();
 
@@ -13,6 +16,9 @@ const router = express.Router();
 router.get('/public/:pageKey', PageContentController.getPublicPageContent);
 
 // ==================== ADMIN ROUTES ====================
+// Everything below this line needs an admin login, so a route added later is locked by default.
+router.use(authMiddleware, authorizeRoles('admin'));
+
 // Get all page definitions (structure)
 router.get('/definitions', PageContentController.getPageDefinitions);
 
@@ -26,10 +32,18 @@ router.get('/:pageKey', PageContentController.getPageWithSections);
 router.get('/:pageKey/:sectionKey', PageContentController.getSectionContent);
 
 // Update a specific section content
-router.patch('/:pageKey/:sectionKey', PageContentController.updateSectionContent);
+router.patch(
+    '/:pageKey/:sectionKey',
+    validateRequest(PageContentValidation.updateSectionContentZodSchema),
+    PageContentController.updateSectionContent
+);
 
 // Update multiple sections at once
-router.patch('/:pageKey', PageContentController.updateMultipleSections);
+router.patch(
+    '/:pageKey',
+    validateRequest(PageContentValidation.updateMultipleSectionsZodSchema),
+    PageContentController.updateMultipleSections
+);
 
 // Toggle section active status
 router.patch('/:pageKey/:sectionKey/toggle', PageContentController.toggleSectionActive);

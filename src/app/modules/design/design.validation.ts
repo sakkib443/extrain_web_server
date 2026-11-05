@@ -38,10 +38,27 @@ const heroContentValidation = z.object({
     }).optional()
 });
 
+// Their shape is set by the Mongoose sub-schemas (Mixed for the about sections); here they only have to be objects.
+const contentBlock = z.record(z.unknown()).optional();
+
+const contentFields = {
+    heroContent: heroContentValidation.optional(),
+    digitalProductsContent: contentBlock,
+    whatWeProvideContent: contentBlock,
+    contactContent: contentBlock,
+    aboutHeroContent: contentBlock,
+    aboutMissionContent: contentBlock,
+    aboutStatsContent: contentBlock,
+    aboutFeaturesContent: contentBlock,
+    aboutFounderContent: contentBlock,
+    aboutGlobalContent: contentBlock,
+    aboutCTAContent: contentBlock
+};
+
 const createDesignZodSchema = z.object({
     body: z.object({
         section: z.enum(['hero', 'about', 'footer', 'topHeader', 'navbar']),
-        heroContent: heroContentValidation.optional(),
+        ...contentFields,
         isActive: z.boolean().optional()
     })
 });
@@ -49,7 +66,7 @@ const createDesignZodSchema = z.object({
 const updateDesignZodSchema = z.object({
     body: z.object({
         section: z.enum(['hero', 'about', 'footer', 'topHeader', 'navbar']).optional(),
-        heroContent: heroContentValidation.optional(),
+        ...contentFields,
         isActive: z.boolean().optional()
     })
 });

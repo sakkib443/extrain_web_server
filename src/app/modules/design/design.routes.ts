@@ -6,6 +6,7 @@
 import express from 'express';
 import { DesignController } from './design.controller';
 import validateRequest from '../../middlewares/validateRequest';
+import { authMiddleware, authorizeRoles } from '../../middlewares/auth';
 import { DesignValidation } from './design.validation';
 
 const router = express.Router();
@@ -16,6 +17,8 @@ const router = express.Router();
 router.get('/:section', DesignController.getDesignBySection);
 
 // ==================== Admin Routes ====================
+// Everything below this line needs an admin login, so a route added later is locked by default.
+router.use(authMiddleware, authorizeRoles('admin'));
 
 // Get all designs
 router.get('/', DesignController.getAllDesigns);

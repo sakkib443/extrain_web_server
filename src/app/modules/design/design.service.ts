@@ -5,6 +5,46 @@
 
 import { IDesign } from './design.interface';
 import { Design } from './design.model';
+import AppError from '../../utils/AppError';
+
+// The one content field each section owns. Only that field and isActive can be written for a section, so
+// nothing else in a request body (section, _id, timestamps, another section's content) reaches the database.
+const SECTION_CONTENT_FIELD = new Map<string, keyof IDesign | null>([
+    ['hero', 'heroContent'],
+    ['digitalProducts', 'digitalProductsContent'],
+    ['whatWeProvide', 'whatWeProvideContent'],
+    ['contact', 'contactContent'],
+    ['aboutHero', 'aboutHeroContent'],
+    ['aboutMission', 'aboutMissionContent'],
+    ['aboutStats', 'aboutStatsContent'],
+    ['aboutFeatures', 'aboutFeaturesContent'],
+    ['aboutFounder', 'aboutFounderContent'],
+    ['aboutGlobal', 'aboutGlobalContent'],
+    ['aboutCTA', 'aboutCTAContent'],
+    // sections with no content field of their own
+    ['about', null],
+    ['footer', null],
+    ['topHeader', null],
+    ['navbar', null]
+]);
+
+const pickWritableFields = (section: string, payload: Partial<IDesign>): Partial<IDesign> => {
+    if (!SECTION_CONTENT_FIELD.has(section)) {
+        throw new AppError(404, `Unknown design section: ${section}`);
+    }
+
+    const contentField = SECTION_CONTENT_FIELD.get(section);
+    const fields: Record<string, unknown> = {};
+
+    if (contentField && payload[contentField] !== undefined) {
+        fields[contentField] = payload[contentField];
+    }
+    if (payload.isActive !== undefined) {
+        fields.isActive = payload.isActive;
+    }
+
+    return fields as Partial<IDesign>;
+};
 
 /**
  * Get design by section
@@ -182,10 +222,16 @@ const updateDesignBySection = async (
     section: string,
     payload: Partial<IDesign>
 ): Promise<IDesign | null> => {
+    const fields = pickWritableFields(section, payload);
+
+    if (Object.keys(fields).length === 0) {
+        throw new AppError(400, `Nothing to update for section: ${section}`);
+    }
+
     // Use upsert to create if doesn't exist
     const result = await Design.findOneAndUpdate(
         { section },
-        { $set: payload },
+        { $set: fields },
         { new: true, upsert: true }
     );
     return result;
@@ -195,6 +241,8 @@ const updateDesignBySection = async (
  * Create or update design
  */
 const createDesign = async (payload: IDesign): Promise<IDesign> => {
+    const fields = pickWritableFields(payload.section, payload);
+
     // Check if section already exists
     const existing = await Design.findOne({ section: payload.section });
 
@@ -202,14 +250,14 @@ const createDesign = async (payload: IDesign): Promise<IDesign> => {
         // Update existing
         const updated = await Design.findOneAndUpdate(
             { section: payload.section },
-            { $set: payload },
+            { $set: fields },
             { new: true }
         );
         return updated!;
     }
 
     // Create new
-    const result = await Design.create(payload);
+    const result = await Design.create({ ...fields, section: payload.section });
     return result;
 };
 
