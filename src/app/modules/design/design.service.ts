@@ -118,7 +118,7 @@ const getDesignBySection = async (section: string): Promise<IDesign | null> => {
                     officeHoursBn: 'শনি - বৃহস্পতি: সকাল ১০টা - সন্ধ্যা ৬টা'
                 },
                 socialLinks: {
-                    facebook: 'https://www.facebook.com/Extrain Web',
+                    facebook: 'https://www.facebook.com/extrainweb/',
                     youtube: 'https://www.youtube.com/@Extrain Web',
                     linkedin: 'https://www.linkedin.com/company/Extrain Web',
                     whatsapp: 'https://wa.me/8801753924093',

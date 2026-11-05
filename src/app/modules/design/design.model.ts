@@ -130,7 +130,7 @@ const contactContentSchema = new Schema({
         officeHoursBn: { type: String, default: 'শনি - বৃহস্পতি: সকাল ১০টা - সন্ধ্যা ৬টা' }
     },
     socialLinks: {
-        facebook: { type: String, default: 'https://www.facebook.com/Extrain Web' },
+        facebook: { type: String, default: 'https://www.facebook.com/extrainweb/' },
         youtube: { type: String, default: 'https://www.youtube.com/@Extrain Web' },
         linkedin: { type: String, default: 'https://www.linkedin.com/company/Extrain Web' },
         whatsapp: { type: String, default: 'https://wa.me/8801753924093' },
