@@ -3,4 +3,3 @@ dist
 .vercel
 .env*.local
 renumber-backup.json
-config.bat
